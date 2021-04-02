@@ -24,7 +24,8 @@
   },
   "keywords": [
     "TypeScript",
-    "npm"
+    "React",
+    "hooks"
   ],
   "author": "Andrew Wittrock",
   "license": "MIT",

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
-import { IUseGlobalOptions } from './types';
+import { IUseGlobalOptions, Setter } from './types';
 
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
 
@@ -42,7 +42,7 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
 }
 
 export const useGlobal = <T>(options?:IUseGlobalOptions<T>) =>
-    (index: string, initialValue:T):[T, Func<T | Func<T, T>, void>] => {
+    (index: string, initialValue:T):[T, Setter<T>] => {
         const get:Func<void, T> = options?.loadInitialValue
             ? options.loadInitialValue(index, initialValue)
             : () => initialValue;

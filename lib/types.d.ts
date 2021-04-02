@@ -5,6 +5,6 @@ export declare interface IUseGlobalOptions<T> {
     onUpdate?: (index:string, newValue:T) => void;
 }
 
-export type Setter<T> = Func<T | Func<T, T>, void>;
+export declare type Setter<T> = Func<T | Func<T, T>, void>;
 
-export type Injector<A extends {}, B extends {}> = Func<A, A & B>;
+export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;
