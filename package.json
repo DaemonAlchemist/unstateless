@@ -1,0 +1,50 @@
+{
+  "name": "unstateless",
+  "version": "0.0.0",
+  "description": "A library for creating injectable, persistent, shared state React hooks",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "jest",
+    "test-watch": "jest --watch",
+    "build": "rm -rf dist/* && tsc && cp lib/types.d.ts dist/types.d.ts",
+    "new-tag": "git push && git push origin --tags && npm run build && npm publish",
+    "major": "npm version major && npm run new-tag",
+    "minor": "npm version minor && npm run new-tag",
+    "patch": "npm version patch && npm run new-tag",
+    "major-clean": "npm install && npm run major && rm -rf node_modules",
+    "minor-clean": "npm install && npm run minor && rm -rf node_modules",
+    "patch-clean": "npm install && npm run patch && rm -rf node_modules",
+    "check-dependencies": "dependency-check ./package.json && dependency-check ./package.json --unused",
+    "check": "ncu --packageFile package.json",
+    "evergreen": "ncu -ua --packageFile package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DaemonAlchemist/unstateless.git"
+  },
+  "keywords": [
+    "TypeScript",
+    "npm"
+  ],
+  "author": "Andrew Wittrock",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/DaemonAlchemist/unstateless/issues"
+  },
+  "homepage": "https://github.com/DaemonAlchemist/unstateless#readme",
+  "devDependencies": {
+    "@types/jest": "^24.0.17",
+    "@types/react": "^17.0.3",
+    "@types/redux": "^3.6.0",
+    "dependency-check": "^4.1.0",
+    "jest": "^24.8.0",
+    "npm-check-updates": "^3.1.20",
+    "ts-jest": "^26.5.4",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.5.3"
+  },
+  "dependencies": {
+    "react": "^17.0.2",
+    "ts-functional": "^1.10.0"
+  }
+}
