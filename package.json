@@ -1,6 +1,6 @@
 {
   "name": "unstateless",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "A library for creating injectable, persistent, shared state React hooks",
   "main": "dist/index.js",
   "scripts": {
@@ -34,9 +34,16 @@
   },
   "homepage": "https://github.com/DaemonAlchemist/unstateless#readme",
   "devDependencies": {
+    "@babel/core": "^7.13.14",
+    "@babel/preset-env": "^7.13.12",
+    "@babel/preset-react": "^7.13.13",
+    "@babel/preset-typescript": "^7.13.0",
+    "@testing-library/jest-dom": "^5.11.10",
+    "@testing-library/react": "^11.2.6",
     "@types/jest": "^24.0.17",
     "@types/react": "^17.0.3",
     "@types/redux": "^3.6.0",
+    "babel-jest": "^24.9.0",
     "dependency-check": "^4.1.0",
     "jest": "^24.8.0",
     "npm-check-updates": "^3.1.20",

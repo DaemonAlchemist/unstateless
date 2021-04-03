@@ -2,13 +2,15 @@ module.exports = {
     "globals": {
       "ts-jest": {
         isolatedModules: true,
+        jsx: "react",
+        tsConfig: '<rootDir>/tsconfig.json'
       }
     },
     "roots": [
       "<rootDir>/lib"
     ],
     "transform": {
-      "^.+\\.tsx?$": "ts-jest"
+      "^.+\\.tsx?$": "babel-jest",
     },
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$",
     "moduleFileExtensions": [
