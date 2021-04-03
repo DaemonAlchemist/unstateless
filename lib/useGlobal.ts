@@ -28,9 +28,6 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
 
 const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
     React.useEffect(() => {
-        const v = get();
-        setVal(v);
-
         if(!subscribers[index]) {
             subscribers[index] = new Set<(val:any) => void>();
         }
