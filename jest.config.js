@@ -6,8 +6,12 @@ module.exports = {
         tsConfig: '<rootDir>/tsconfig.json'
       }
     },
+    "resetMocks": false,
     "roots": [
       "<rootDir>/lib"
+    ],
+    "setupFiles":[
+      "jest-localstorage-mock",
     ],
     "transform": {
       "^.+\\.tsx?$": "babel-jest",
