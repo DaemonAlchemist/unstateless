@@ -13,64 +13,64 @@ console.clear = () => {
 // console.log = jest.fn((msg:string) => {log.push(msg)});
 // console.error = jest.fn((msg:string) => {error.push(msg)});
 
-describe("unstateless", () => {
-    describe("setup", () => {
-        it("runs enzyme with hooks", () => {
-            const Test = () => {
-                const [test, setTest] = React.useState("test");
-                const update = () => {setTest("clicked");}
-                return <>
-                    <div data-testid="test">{test}</div>
-                    <button data-testid="button" onClick={update} >Click</button>
-                </>;
-            }
-            render(<Test />);
-            expect(screen.getByTestId("test")).toHaveTextContent("test");
-            fireEvent.click(screen.getByTestId("button"));
-            expect(screen.getByTestId("test")).toHaveTextContent("clicked");
+const useTest = () => useSharedState("test", "test");
+const useFoo = () => useSharedState("foo", "foo");
 
-        });
-    });
+const Test1 = () => {
+    const [test, setTest] = useTest();
+    const [foo, setFoo] = useFoo();
+    const updateTest = () => {setTest("clicked");}
+    const updateFoo = () => {setFoo("clicked-foo");}
+    return <>
+        <div data-testid="test1">{test}</div>
+        <button data-testid="button1" onClick={updateTest} >Click</button>
+        <div data-testid="foo1">{foo}</div>
+        <button data-testid="foo-button1" onClick={updateFoo} >Click</button>
+    </>;
+}
+const Test2 = () => {
+    const [test, setTest] = useTest();
+    const [foo, setFoo] = useFoo();
+    const updateTest = () => {setTest("clicked");}
+    const updateFoo = () => {setFoo("clicked-foo");}
+    return <>
+        <div data-testid="test2">{test}</div>
+        <button data-testid="button2" onClick={updateTest} >Click</button>
+        <div data-testid="foo2">{foo}</div>
+        <button data-testid="foo-button2" onClick={updateFoo} >Click</button>
+    </>;
+}
+
+describe("unstateless", () => {
     describe("useSharedState", () => {
         it("works within a single component", () => {
-            const useTest = () => useSharedState("test", "test");
-            const Test = () => {
-                const [test, setTest] = useTest();
-                const update = () => {setTest("clicked");}
-                return <>
-                    <div data-testid="test">{test}</div>
-                    <button data-testid="button" onClick={update} >Click</button>
-                </>;
-            }
-            render(<Test />);
-            expect(screen.getByTestId("test")).toHaveTextContent("test");
-            fireEvent.click(screen.getByTestId("button"));
-            expect(screen.getByTestId("test")).toHaveTextContent("clicked");
+            render(<Test1 />);
+            expect(screen.getByTestId("test1")).toHaveTextContent("test");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            fireEvent.click(screen.getByTestId("foo-button1"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
         });
         it("shares values with multiple components", () => {
             const useTest = () => useSharedState("test", "test");
-            const Test1 = () => {
-                const [test, setTest] = useTest();
-                const update = () => {setTest("clicked");}
-                return <>
-                    <div data-testid="test1">{test}</div>
-                    <button data-testid="button1" onClick={update} >Click</button>
-                </>;
-            }
-            const Test2 = () => {
-                const [test, setTest] = useTest();
-                const update = () => {setTest("clicked");}
-                return <>
-                    <div data-testid="test2">{test}</div>
-                    <button data-testid="button2" onClick={update} >Click</button>
-                </>;
-            }
             render(<><Test1 /><Test2 /></>);
             expect(screen.getByTestId("test1")).toHaveTextContent("test");
             expect(screen.getByTestId("test2")).toHaveTextContent("test");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            expect(screen.getByTestId("foo2")).toHaveTextContent("foo");
             fireEvent.click(screen.getByTestId("button1"));
             expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
             expect(screen.getByTestId("test2")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            expect(screen.getByTestId("foo2")).toHaveTextContent("foo");
+            fireEvent.click(screen.getByTestId("foo-button2"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("test2")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
+            expect(screen.getByTestId("foo2")).toHaveTextContent("clicked-foo");
         });
     });
 });
