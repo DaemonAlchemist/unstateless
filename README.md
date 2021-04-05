@@ -132,13 +132,13 @@ The `useSharedState` hook works the same as the standard React `useState` hook. 
 
 The `useLocalStorage` hook works the same as the `useSharedState` hook.  The only difference is that the latest state is persisted in localStorage.  When the app is re-loaded, this hook will first check localStorage for an existing value to use as the initial value.  If no value is found in localStorage, this hook will use the provided `initialValue` instead to bootstrap the state.  You need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
 
-#### `useLocalStorage.string: (stateId: string, initialValue:string):[string, Setter<string>]`
+#### `useLocalStorage.string: (stateId: string, initialValue:string) => [string, Setter<string>]`
 
-#### `useLocalStorage.number: (stateId: string, initialValue:number):[number, Setter<number>]`
+#### `useLocalStorage.number: (stateId: string, initialValue:number) => [number, Setter<number>]`
 
-#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean):[boolean, Setter<boolean>]`
+#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean) => [boolean, Setter<boolean>]`
 
-#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T):[T, Setter<T>]`
+#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => [T, Setter<T>]`
 
 ### `mergeProps`
 
