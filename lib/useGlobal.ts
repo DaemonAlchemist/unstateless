@@ -40,8 +40,8 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
 
 export const useGlobal = <T>(options?:IUseGlobalOptions<T>) =>
     (index: string, initialValue:T):[T, Setter<T>] => {
-        const get:Func<void, T> = options?.loadInitialValue
-            ? () => options?.loadInitialValue(index, initialValue)
+        const get:Func<void, T> = !!options && !!options.loadInitialValue
+            ? () => (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
             : () => initialValue;
 
         const [val, setVal] = React.useState<T>(get() || initialValue);
