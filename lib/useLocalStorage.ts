@@ -1,7 +1,7 @@
 import { useGlobal } from "./useGlobal";
 import { Func } from "ts-functional/dist/types";
 
-const loadLocalStorageValue = <T>(postLoad:Func<string, T>) => (index:string, initialValue:T) => {
+const loadLocalStorageValue = <T>(deserialize:Func<string, T>) => (index:string, initialValue:T) => {
     const localVal = window.localStorage.getItem(index);
     let parsedVal:T | undefined;
     if(localVal === null) {
@@ -11,7 +11,7 @@ const loadLocalStorageValue = <T>(postLoad:Func<string, T>) => (index:string, in
         parsedVal = initialValue;
     } else {
         try {
-            parsedVal = postLoad(localVal);
+            parsedVal = deserialize(localVal);
         } catch (e) {
             parsedVal = initialValue;
         }
@@ -19,22 +19,22 @@ const loadLocalStorageValue = <T>(postLoad:Func<string, T>) => (index:string, in
     return parsedVal;
 };
 
-const saveLocalStorageValue = <T>(preSave:Func<T, string>) => (index:string, newValue:T) => {
-    window.localStorage.setItem(index, preSave(newValue));
+const saveLocalStorageValue = <T>(serialize:Func<T, string>) => (index:string, newValue:T) => {
+    window.localStorage.setItem(index, serialize(newValue));
 }
 
-const useLocalStorageRaw = <T>(options:{postLoad:Func<string, T>, preSave:Func<T, string>}) => useGlobal<T>({
-    loadInitialValue: loadLocalStorageValue<T>(options.postLoad),
-    onUpdate: saveLocalStorageValue<T>(options.preSave),
+const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => useGlobal<T>({
+    loadInitialValue: loadLocalStorageValue<T>(options.deserialize),
+    onUpdate: saveLocalStorageValue<T>(options.serialize),
 });
 
 useLocalStorageRaw.string = (index: string, i:string) =>
-    useLocalStorageRaw<string>({postLoad: (a:string) => a, preSave:(a:string) => a})(index, i);
+    useLocalStorageRaw<string>({deserialize: (a:string) => a, serialize:(a:string) => a})(index, i);
 useLocalStorageRaw.number = (index: string, i:number) =>
-    useLocalStorageRaw<number>({postLoad: (a:string) => +a, preSave:(a:number) => `${a}`})(index, i);
+    useLocalStorageRaw<number>({deserialize: (a:string) => +a, serialize:(a:number) => `${a}`})(index, i);
 useLocalStorageRaw.boolean = (index: string, i:boolean) =>
-    useLocalStorageRaw<boolean>({postLoad: (a:string) => !!a, preSave:(a:boolean) => a ? "1" : ""})(index, i);
+    useLocalStorageRaw<boolean>({deserialize: (a:string) => !!a, serialize:(a:boolean) => a ? "1" : ""})(index, i);
 useLocalStorageRaw.object = <T extends {}>(index: string, i:T) =>
-    useLocalStorageRaw<T>({postLoad: JSON.parse, preSave: JSON.stringify})(index, i);
+    useLocalStorageRaw<T>({deserialize: JSON.parse, serialize: JSON.stringify})(index, i);
 
 export const useLocalStorage = useLocalStorageRaw;
