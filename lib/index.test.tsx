@@ -2,8 +2,9 @@
 import { render, fireEvent, waitFor, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/extend-expect'
 import * as React from 'react';
-import { useSharedState } from '.';
+import { mergeProps, useSharedState } from '.';
 import { useLocalStorage } from './useLocalStorage';
+import { inject } from './inject';
 
 // Override console log for testing
 let log:string[] = [];
@@ -65,14 +66,46 @@ const TestLocalStorage = () => {
 }
 
 const TestLocalStorage2 = () => {
-    const[preset1, setPreset1] = usePresetJson();
+    const[preset1, setPreset1] = usePreset1();
+    const[preset2, setPreset2] = usePreset2();
+    const[notSet, setNotSet] = useNotSet();
+    const[presetJson1, setPresetJson1] = usePresetJson();
 
     return <>
-        <div data-testid="a">{preset1.a}</div>
-        <div data-testid="b">{preset1.b}</div>
-        <button data-testid="preset1-button" onClick={() => {setPreset1({a: 5, b: 6})}}>Click!</button>
+        <div data-testid="preset1-2">{preset1}</div>
+        <button data-testid="preset1-button-2" onClick={() => {setPreset1("clicked-preset-1")}}>Click!</button>
+
+        <div data-testid="preset2-2">{preset2}</div>
+        <button data-testid="preset2-button-2" onClick={() => {setPreset2("clicked-preset-2")}}>Click!</button>
+
+        <div data-testid="notSet1-2">{notSet}</div>
+        <button data-testid="notSet1-button-2" onClick={() => {setNotSet("clicked-not-set-1")}}>Click!</button>
+
+        <div data-testid="a">{presetJson1.a}</div>
+        <div data-testid="b">{presetJson1.b}</div>
+        <button data-testid="presetjson1-button" onClick={() => {setPresetJson1({a: 5, b: 6})}}>Click!</button>
     </>;
 }
+
+const injectA = (props:any) => ({...props, a: "A"});
+const injectB = (props:any) => ({...props, b: "B"});
+const injectCD = (props:any) => ({...props, c: "C", d: "D"});
+
+interface InjectProps {
+    a: string;
+    b: string;
+    c: string;
+    d: string;
+}
+const TestInjectStateless = (props:InjectProps) => <>
+    <div data-testid="a">{props.a}</div>
+    <div data-testid="b">{props.b}</div>
+    <div data-testid="c">{props.c}</div>
+    <div data-testid="d">{props.d}</div>
+</>;
+
+const connect = inject<{}, InjectProps>(mergeProps(injectA, injectB, injectCD));
+const TestInjectStateful = connect(TestInjectStateless);
 
 beforeEach(() => {
     localStorage.clear();
@@ -139,5 +172,27 @@ describe("unstateless", () => {
             expect(screen.getByTestId("a")).toHaveTextContent("1");
             expect(screen.getByTestId("b")).toHaveTextContent("2");
         });
+        it("should save to localStorage when updating", () => {
+            render(<TestLocalStorage />);
+            fireEvent.click(screen.getByTestId("preset1-button"));
+
+            expect(localStorage.setItem).toHaveBeenCalledWith("preset1", "clicked-preset-1");
+        });
+        it("should rerender all components when updating", () => {
+            render(<><TestLocalStorage /><TestLocalStorage2 /></>);
+
+            fireEvent.click(screen.getByTestId("preset1-button"));
+            expect(screen.getByTestId("preset1-2")).toHaveTextContent("clicked-preset-1");
+        })
     });
+    describe("inject", () => {
+        it("should inject props into components", () => {
+            render(<TestInjectStateful />);
+
+            expect(screen.getByTestId("a")).toHaveTextContent("A");
+            expect(screen.getByTestId("b")).toHaveTextContent("B");
+            expect(screen.getByTestId("c")).toHaveTextContent("C");
+            expect(screen.getByTestId("d")).toHaveTextContent("D");
+        });
+    })
 });
