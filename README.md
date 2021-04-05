@@ -11,7 +11,7 @@
 
 /libs/hooks.ts
 ```typescript
-import { Setter, useSharedState} from "unstateless";
+import { Setter, useLocalStorage, useSharedState } from "unstateless";
 
 // Store the user's current workspace
 
@@ -34,7 +34,7 @@ export interface ICurrentScreen {
     setScreen: Setter<string>;
 }
 
-export const useCurrentScreen = (workspace:string) => useSharedState(`screen-${workspace}`, "");
+export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "");
 
 export const injectCurrentScreen = <T extends IWorkspace>(props:T):T & ICurrentScreen => {
     const [screen, setScreen] = useCurrentScreen<string>(props.workspace);
@@ -124,19 +124,27 @@ export const ScreenSelector = connect((props:Props) =>
 ```
 ## Public API
 
-### `useSharedState<T>: (stateId: string, initialValue:T):[T, Setter<T>]`
+### `useSharedState: <T>(stateId: string, initialValue:T) => [T, Setter<T>]`
 
 The `useSharedState` hook works the same as the standard React `useState` hook.  The only difference is that you need to provide an `stateId` parameter to hook up to the correct global state.  The first value of the returned tuple will be the current value of the state.  The second value of the tuple will be a setter function that takes either a new `T` value or a function `(old:T) => T` that calculates the new value from the old value.  When the state is updated, all components hooked up to that state will re-render.
 
-### `useLocalStorage<T>: (stateId: string, initialValue:T):[T, Setter<T>]`
+### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => [T, Setter<T>]`
 
-The `useLocalStorage` hook works the same as the `useSharedState` hook.  The only difference is that the latest state is persisted in localStorage.  When the app is re-loaded, this hook will first check localStorage for an existing value to use as the initial value.  If no value is found in localStorage, this hook will use the provided `initialValue` instead to bootstrap the state.
+The `useLocalStorage` hook works the same as the `useSharedState` hook.  The only difference is that the latest state is persisted in localStorage.  When the app is re-loaded, this hook will first check localStorage for an existing value to use as the initial value.  If no value is found in localStorage, this hook will use the provided `initialValue` instead to bootstrap the state.  You need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
+
+#### `useLocalStorage.string: (stateId: string, initialValue:string):[string, Setter<string>]`
+
+#### `useLocalStorage.number: (stateId: string, initialValue:number):[number, Setter<number>]`
+
+#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean):[boolean, Setter<boolean>]`
+
+#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T):[T, Setter<T>]`
 
 ### `mergeProps`
 
 The `mergeProps` function is used to chain together several property injectors.  Under the hood, it is simply a function compositor that composites the injectors from left to right.  It expects the injector functions to have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, an injector function should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
 
-### `inject<A extends {}, B extends {}>: (injector:Injector<A, B>) => (Component:React.ComponentType<B>):Func<A, JSX.Element> => (props:A):JSX.Element`
+### `inject: <A extends {}, B extends {}>(injector:Injector<A, B>) => (Component:React.ComponentType<B>):Func<A, JSX.Element> => (props:A):JSX.Element`
 
 The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  It works in a similar manner to Redux's `connect` function.
 
