@@ -25,9 +25,7 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     }, {});
 
     // Update the subscribers if there are any
-    if(!!subscribers[index]) {
-        subscribers[index].forEach((setter) => {setter(newSetter);});
-    }
+    subscribers[index].forEach((setter) => {setter(newSetter);});
 }
 
 const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
@@ -48,7 +46,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
             ? () => (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
             : () => initialValue;
 
-        const [val, setVal] = React.useState<T>(get() || initialValue);
+        const [val, setVal] = React.useState<T>(get());
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index, options?.onUpdate);

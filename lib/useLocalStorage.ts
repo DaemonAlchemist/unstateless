@@ -1,13 +1,11 @@
 import { useGlobal } from "./useGlobal";
 import { Func } from "ts-functional/dist/types";
 
-const loadLocalStorageValue = <T>(deserialize:Func<string, T>) => (index:string, initialValue:T) => {
+const loadLocalStorageValue = <T>(deserialize:Func<string, T>, serialize:Func<T, string>) => (index:string, initialValue:T) => {
     const localVal = window.localStorage.getItem(index);
     let parsedVal:T | undefined;
     if(localVal === null) {
-        if(initialValue !== null && initialValue !== undefined){
-            window.localStorage.setItem(index, JSON.stringify(initialValue));
-        }
+        window.localStorage.setItem(index, serialize(initialValue));
         parsedVal = initialValue;
     } else {
         try {
@@ -24,7 +22,7 @@ const saveLocalStorageValue = <T>(serialize:Func<T, string>) => (index:string, n
 }
 
 const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => useGlobal<T>({
-    loadInitialValue: loadLocalStorageValue<T>(options.deserialize),
+    loadInitialValue: loadLocalStorageValue<T>(options.deserialize, options.serialize),
     onUpdate: saveLocalStorageValue<T>(options.serialize),
 });
 

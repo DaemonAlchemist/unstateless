@@ -11,10 +11,12 @@ const Test1 = () => {
     const [test, setTest] = useTest();
     const [foo, setFoo] = useFoo();
     const updateTest = () => {setTest("clicked");}
+    const updateTest2 = () => {setTest("clicked2");}
     const updateFoo = () => {setFoo("clicked-foo");}
     return <>
         <div data-testid="test1">{test}</div>
         <button data-testid="button1" onClick={updateTest} >Click</button>
+        <button data-testid="button1-2" onClick={updateTest2} >Click</button>
         <div data-testid="foo1">{foo}</div>
         <button data-testid="foo-button1" onClick={updateFoo} >Click</button>
     </>;
@@ -32,14 +34,29 @@ const Test2 = () => {
     </>;
 }
 
+const Test3 = () => {
+    const [test, setTest] = useTest();
+    const [foo, setFoo] = useFoo();
+    const updateTest = () => {setTest(old => `${old}-clicked`);}
+    const updateFoo = () => {setFoo("clicked-foo");}
+    return <>
+        <div data-testid="test2">{test}</div>
+        <button data-testid="button2" onClick={updateTest} >Click</button>
+        <div data-testid="foo2">{foo}</div>
+        <button data-testid="foo-button2" onClick={updateFoo} >Click</button>
+    </>;
+}
+
 const usePreset1 = () => useLocalStorage.string("preset1", "shouldnt-be-set");
-const usePreset2 = () => useLocalStorage.string("preset2", "shouldnt-be-set");
+const usePreset2 = () => useLocalStorage.number("preset2", 0);
+const usePreset3 = () => useLocalStorage.boolean("preset3", false);
 const usePresetJson = () => useLocalStorage.object("presetJson1", {a: 3, b: 4});
 const useNotSet = () => useLocalStorage.string("notSet1", "notSet1");
 
 const TestLocalStorage = () => {
     const[preset1, setPreset1] = usePreset1();
     const[preset2, setPreset2] = usePreset2();
+    const[preset3, setPreset3] = usePreset3();
     const[notSet, setNotSet] = useNotSet();
 
     return <>
@@ -47,7 +64,11 @@ const TestLocalStorage = () => {
         <button data-testid="preset1-button" onClick={() => {setPreset1("clicked-preset-1")}}>Click!</button>
 
         <div data-testid="preset2">{preset2}</div>
-        <button data-testid="preset2-button" onClick={() => {setPreset2("clicked-preset-2")}}>Click!</button>
+        <button data-testid="preset2-button" onClick={() => {setPreset2(2)}}>Click!</button>
+
+        <div data-testid="preset3">{preset3}</div>
+        <button data-testid="preset3-button" onClick={() => {setPreset3(false)}}>Click!</button>
+        <button data-testid="preset3-button2" onClick={() => {setPreset3(true)}}>Click!</button>
 
         <div data-testid="notSet1">{notSet}</div>
         <button data-testid="notSet1-button" onClick={() => {setNotSet("clicked-not-set-1")}}>Click!</button>
@@ -65,7 +86,7 @@ const TestLocalStorage2 = () => {
         <button data-testid="preset1-button-2" onClick={() => {setPreset1("clicked-preset-1")}}>Click!</button>
 
         <div data-testid="preset2-2">{preset2}</div>
-        <button data-testid="preset2-button-2" onClick={() => {setPreset2("clicked-preset-2")}}>Click!</button>
+        <button data-testid="preset2-button-2" onClick={() => {setPreset2(3)}}>Click!</button>
 
         <div data-testid="notSet1-2">{notSet}</div>
         <button data-testid="notSet1-button-2" onClick={() => {setNotSet("clicked-not-set-1")}}>Click!</button>
@@ -101,7 +122,8 @@ beforeEach(() => {
 
     // Setup initial localStorage values
     localStorage.setItem("preset1", "foo1");
-    localStorage.setItem("preset2", "foo2");
+    localStorage.setItem("preset2", "1");
+    localStorage.setItem("preset3", "1");
     localStorage.setItem("presetJson1", JSON.stringify({a: 1, b: 2}));
 
     // Clear mocks
@@ -116,7 +138,8 @@ describe("unstateless", () => {
     describe("test setup", () => {
         it("should setup localstorage", () => {
             expect(localStorage.getItem("preset1")).toEqual("foo1");
-            expect(localStorage.getItem("preset2")).toEqual("foo2");
+            expect(localStorage.getItem("preset2")).toEqual("1");
+            expect(localStorage.getItem("preset3")).toEqual("1");
             expect(localStorage.getItem("presetJson1")).toEqual('{"a":1,"b":2}');
         });
     });
@@ -133,7 +156,6 @@ describe("unstateless", () => {
             expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
         });
         it("shares values with multiple components", () => {
-            const useTest = () => useSharedState("test", "test");
             render(<><Test1 /><Test2 /></>);
             expect(screen.getByTestId("test1")).toHaveTextContent("test");
             expect(screen.getByTestId("test2")).toHaveTextContent("test");
@@ -150,6 +172,11 @@ describe("unstateless", () => {
             expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
             expect(screen.getByTestId("foo2")).toHaveTextContent("clicked-foo");
         });
+        it("should allow updating with function", () => {
+            render(<Test3 />);
+            fireEvent.click(screen.getByTestId("button2"));
+            expect(screen.getByTestId("test2")).toHaveTextContent("test-clicked");
+        })
     });
     describe("useLocalStorage", () => {
         it("should load raw intial values from localstorage if available", () => {
@@ -157,7 +184,7 @@ describe("unstateless", () => {
 
             expect(screen.getByTestId("notSet1")).toHaveTextContent("notSet1");
             expect(screen.getByTestId("preset1")).toHaveTextContent("foo1");
-            expect(screen.getByTestId("preset2")).toHaveTextContent("foo2");
+            expect(screen.getByTestId("preset2")).toHaveTextContent("1");
         });
         it("should load JSON intial values from localstorage if available", () => {
             render(<TestLocalStorage2 />);
@@ -167,15 +194,30 @@ describe("unstateless", () => {
         });
         it("should save to localStorage when updating", () => {
             render(<TestLocalStorage />);
-            fireEvent.click(screen.getByTestId("preset1-button"));
 
+            fireEvent.click(screen.getByTestId("preset1-button"));
             expect(localStorage.setItem).toHaveBeenCalledWith("preset1", "clicked-preset-1");
+
+            fireEvent.click(screen.getByTestId("preset2-button"));
+            expect(localStorage.setItem).toHaveBeenCalledWith("preset2", "2");
+
+            fireEvent.click(screen.getByTestId("preset3-button"));
+            expect(localStorage.setItem).toHaveBeenCalledWith("preset3", "");
+
+            fireEvent.click(screen.getByTestId("preset3-button2"));
+            expect(localStorage.setItem).toHaveBeenCalledWith("preset3", "1");
         });
         it("should rerender all components when updating", () => {
             render(<><TestLocalStorage /><TestLocalStorage2 /></>);
 
             fireEvent.click(screen.getByTestId("preset1-button"));
             expect(screen.getByTestId("preset1-2")).toHaveTextContent("clicked-preset-1");
+        });
+        it("should use initialValue if localStorage value is invalid", () => {
+            localStorage.setItem("presetJson1", "Dfsddf");
+            render(<TestLocalStorage2 />);
+            expect(screen.getByTestId("a")).toHaveTextContent("3");
+            expect(screen.getByTestId("b")).toHaveTextContent("4");
         })
     });
     describe("inject", () => {
@@ -195,6 +237,16 @@ describe("unstateless", () => {
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
             expect(test).toHaveBeenCalledWith("test", "clicked");
-        })
+        });
+        it("should allow removing listen hooks", () => {
+            const test = jest.fn();
+            useGlobal.listen.on("test", test);
+            render(<Test1 />);
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(test).toHaveBeenCalledWith("test", "clicked");
+            useGlobal.listen.off("test", test);
+            fireEvent.click(screen.getByTestId("button1-2"));
+            expect(test).toHaveBeenCalledTimes(1);
+        });
     })
 });
