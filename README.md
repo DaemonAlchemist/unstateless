@@ -1,11 +1,12 @@
 # Unstateless
 
-`unstateless` is a state management library for React that allows the creation of injectable, persistent, shared state hooks.  With `unstateless`, developers can use React hooks to maintain local state in components while still having completely stateless component functions.  `unstateless` is intended to be an alternative to other state management libraries such as Redux, although it can easily be used in conjunction with them.  `unstateless` exports several functions that work together to manage your application's state:
+`unstateless` is a state management library for React that allows the creation of injectable, persistent, shared state hooks.  With `unstateless`, stateless components can be "upgraded" into stateful components by injecting React hooks as props.  `unstateless` is intended to be an alternative to other state management libraries such as Redux, although it can be used in conjunction with them.  `unstateless` exports several functions that work together to manage your application's state:
 
 - `useSharedState`: A React hook that allows state to be shared among several components.  Changing the state anywhere will cause all components that use that hook to rerender.
 - `useLocalStorage`:  The same as useSharedState, except the current value is persisted in localStorage.
 - `mergeProps`: A function that allows property injector functions to be chained together.
 - `inject`:  A function that creates a higher-order component that injects the specified props into a component.
+- `useglobal.listen`: Provides hooks into shared state changes.  Use this to log state updates or provide middle-ware like logic on state changes.
 
 ## Basic Usage Example
 
@@ -28,6 +29,7 @@ export const injectWorkspace = <T>(props:T):T & IWorkspace => {
 }
 
 // Store the user's current screen for each of their workspaces
+// This uses useLocalStorage, so will be persisted between sessions.
 
 export interface ICurrentScreen {
     screen: string;
@@ -140,6 +142,8 @@ The `useLocalStorage` hook works the same as the `useSharedState` hook.  The onl
 
 #### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => [T, Setter<T>]`
 
+However, you can also use `useLocalStorage` directly if you need custom serialize/deserialize functions.
+
 ### `mergeProps`
 
 The `mergeProps` function is used to chain together several property injectors.  Under the hood, it is simply a function compositor that composites the injectors from left to right.  It expects the injector functions to have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, an injector function should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
@@ -154,7 +158,33 @@ const connect = inject(injector);
 const StatelessComponent = (props) => <>...</>;
 export const StatefulComponent = connect(StatelessComponent);
 ```
+### `useGlobal: <T>(options?:IUseGlobalOptions<T>) => (index: string, initialValue:T) => [T, Setter<T>]`
+
+The base function for both `useSharedState` and `useLocalStorage`.  Use of `useGlobal` directly allows for customized behavior.  There are two optional parameters:
+
+- `loadInitialValue: <T>(index:string, initialValue:T) => T`: Provide a function that customizes how the initial value is calculated from a provided default initial value.
+- `onUpdate: <T>(index:string, newValue:T) => void`:  Provide a function that runs after a new value has been updated.
+
+### Event Listeners
+
+`unstateless` also provides the `useGlobal.listen` object for hooking into shared state changes.
+
+#### `useGlobal.listen.on:  <T>(index:string, spy:UpdateSpy<T>) => void`
+
+This provides a hook into the shared state update process.  Pass in a spy function `(oldVal:T, newVal:T) => void` to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
+
+#### `useGlobal.listen.off:  <T>(index:string, spy:UpdateSpy<T>) => void`
+
+Remove a previously added state update listener.
+
+#### `useGlobal.listen.clear:  (index:string) => void`
+
+Remove all listeners for a shared value
+
+#### `useGlobal.listen.clearAll:  () => void`
+
+Remove all listeners for all shared values
 
 ## Injectors
 
-Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only hard requirement for an injector is that it needs to return the props passed to it in its return object.
+Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only requirement for an injector is that it needs to return the props passed to it in its return object.

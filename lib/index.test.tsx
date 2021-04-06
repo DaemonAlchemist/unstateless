@@ -1,19 +1,8 @@
 // Imports go here
-import { render, fireEvent, waitFor, screen } from '@testing-library/react'
-import '@testing-library/jest-dom/extend-expect'
+import '@testing-library/jest-dom/extend-expect';
+import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { mergeProps, useSharedState } from '.';
-import { useLocalStorage } from './useLocalStorage';
-import { inject } from './inject';
-
-// Override console log for testing
-let log:string[] = [];
-let error:string[] = [];
-console.clear = () => {
-    log = [];
-}
-// console.log = jest.fn((msg:string) => {log.push(msg)});
-// console.error = jest.fn((msg:string) => {error.push(msg)});
+import { inject, mergeProps, useGlobal, useLocalStorage, useSharedState } from '.';
 
 const useTest = () => useSharedState("test", "test");
 const useFoo = () => useSharedState("foo", "foo");
@@ -115,7 +104,11 @@ beforeEach(() => {
     localStorage.setItem("preset2", "foo2");
     localStorage.setItem("presetJson1", JSON.stringify({a: 1, b: 2}));
 
+    // Clear mocks
     jest.clearAllMocks();
+
+    // Reset spying
+    useGlobal.listen.clearAll();
 });
 window.localStorage = localStorage;
 
@@ -194,5 +187,14 @@ describe("unstateless", () => {
             expect(screen.getByTestId("c")).toHaveTextContent("C");
             expect(screen.getByTestId("d")).toHaveTextContent("D");
         });
+    });
+    describe("listen", () => {
+        it("should allow hooking into state change events", () => {
+            const test = jest.fn();
+            useGlobal.listen.on("test", test);
+            render(<Test1 />);
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(test).toHaveBeenCalledWith("test", "clicked");
+        })
     })
 });

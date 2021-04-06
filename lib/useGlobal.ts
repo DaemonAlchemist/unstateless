@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
-import { IUseGlobalOptions, Setter } from './types';
+import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
+const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
 
 const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:T) => void) => (newValOrSetter:T | Func<T, T>) => {
     // Convert the new value into a setter function if it's a raw value
@@ -16,6 +17,9 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     // memoized, so that the new value is only calculated and updated once.
     const newSetter = memoize((old:T) => {
         const newVal = updateVal(old);
+        if(!!spies[index]) {
+            spies[index].forEach(spy => {spy(old, newVal);});
+        }
         if(onUpdate) {onUpdate(index, newVal);}
         return newVal;
     }, {});
@@ -38,7 +42,7 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
     }, [index, get, setVal]);
 }
 
-export const useGlobal = <T>(options?:IUseGlobalOptions<T>) =>
+const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
     (index: string, initialValue:T):[T, Setter<T>] => {
         const get:Func<void, T> = !!options && !!options.loadInitialValue
             ? () => (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
@@ -51,3 +55,23 @@ export const useGlobal = <T>(options?:IUseGlobalOptions<T>) =>
 
         return [val, set];
     }
+
+useGlobalRaw.listen = {
+    on: <T>(index:string, spy:UpdateSpy<T>) => {
+        if(!spies[index]) {
+            spies[index] = new Set<UpdateSpy<T>>();
+        }
+        spies[index].add(spy);
+    },
+    off: <T>(index:string, spy:UpdateSpy<T>) => {
+        spies[index].delete(spy);
+    },
+    clear: (index:string) => {
+        spies[index].clear();
+    },
+    clearAll: () => {
+        Object.keys(spies).forEach(useGlobalRaw.listen.clear);
+    }
+}
+
+export const useGlobal = useGlobalRaw;

@@ -6,5 +6,6 @@ export declare interface IUseGlobalOptions<T> {
 }
 
 export declare type Setter<T> = Func<T | Func<T, T>, void>;
+export declare type UpdateSpy<T> = (oldVal:T, newVal:T) => void;
 
 export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;
