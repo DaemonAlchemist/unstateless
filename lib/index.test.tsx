@@ -7,6 +7,23 @@ import { inject, mergeProps, useGlobal, useLocalStorage, useSharedState } from '
 const useTest = () => useSharedState("test", "test");
 const useFoo = () => useSharedState("foo", "foo");
 
+const DependentStateTest = () => {
+    const [a, setA] = useSharedState<string>("master", "foo");
+    const [b, setB] = useSharedState<string>(a, "unset");
+    const useStateBar = () => {setA("bar");}
+    const useStateFoo = () => {setA("foo");}
+    const setBVal = (val:string) => () => {setB(val);}
+
+    return <>
+        <div data-testid="a">{a}</div>
+        <div data-testid="b">{b}</div>
+        <button data-testid="bar-btn" onClick={useStateBar}>Click</button>
+        <button data-testid="foo-btn" onClick={useStateFoo}>Click</button>
+        <button data-testid="b-btn" onClick={setBVal("clicked")}>Click</button>
+        <button data-testid="b-btn2" onClick={setBVal("clicked2")}>Click</button>
+    </>;
+}
+
 const Test1 = () => {
     const [test, setTest] = useTest();
     const [foo, setFoo] = useFoo();
@@ -176,7 +193,22 @@ describe("unstateless", () => {
             render(<Test3 />);
             fireEvent.click(screen.getByTestId("button2"));
             expect(screen.getByTestId("test2")).toHaveTextContent("test-clicked");
-        })
+        });
+        it("should update dependent states", () => {
+            render(<DependentStateTest />);
+            expect(screen.getByTestId("a")).toHaveTextContent("foo");
+            expect(screen.getByTestId("b")).toHaveTextContent("unset");
+            fireEvent.click(screen.getByTestId("b-btn"));
+            expect(screen.getByTestId("b")).toHaveTextContent("clicked");
+            fireEvent.click(screen.getByTestId("bar-btn"));
+            expect(screen.getByTestId("a")).toHaveTextContent("bar");
+            expect(screen.getByTestId("b")).toHaveTextContent("unset");
+            fireEvent.click(screen.getByTestId("b-btn2"));
+            expect(screen.getByTestId("b")).toHaveTextContent("clicked2");
+            fireEvent.click(screen.getByTestId("foo-btn"));
+            expect(screen.getByTestId("a")).toHaveTextContent("foo");
+            expect(screen.getByTestId("b")).toHaveTextContent("clicked");
+        });
     });
     describe("useLocalStorage", () => {
         it("should load raw intial values from localstorage if available", () => {

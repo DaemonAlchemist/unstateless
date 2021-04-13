@@ -3,8 +3,15 @@ import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
 import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
+// Record all components who are subscribed to specific global states
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
+
+// Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
+
+// Record the last values for all state.  We need this in case the index for a hook changes,
+// and we need to manually reset the state
+const curValues:{[index:string]:any} = {};
 
 const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:T) => void) => (newValOrSetter:T | Func<T, T>) => {
     // Convert the new value into a setter function if it's a raw value
@@ -17,6 +24,7 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     // memoized, so that the new value is only calculated and updated once.
     const newSetter = memoize((old:T) => {
         const newVal = updateVal(old);
+        curValues[index] = newVal;
         if(!!spies[index]) {
             spies[index].forEach(spy => {spy(old, newVal);});
         }
@@ -46,10 +54,19 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
             ? () => (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
             : () => initialValue;
 
+        const [curIndex, setCurIndex] = React.useState(index);
         const [val, setVal] = React.useState<T>(get());
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index, options?.onUpdate);
+
+        // If the index of this hook changes, we need to manually update the current state based on the last saved value
+        React.useEffect(() => {
+            if(curIndex !== index) {
+                setCurIndex(index);
+                set(curValues[index] || get());
+            }
+        }, [index]);
 
         return [val, set];
     }
