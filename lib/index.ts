@@ -6,6 +6,6 @@ export { Injector, IUseGlobalOptions, Setter, UpdateSpy } from "./types.d";
 export { useGlobal } from './useGlobal';
 export { useLocalStorage } from "./useLocalStorage";
 
-export const useSharedState = <T>(index: string, initialValue:T) => useGlobal()(index, initialValue);
+export const useSharedState = <T>(index: string, initialValue:T) => useGlobal<T>()(index, initialValue);
 export const mergeProps = pipe;
 
