@@ -24,6 +24,36 @@ const DependentStateTest = () => {
     </>;
 }
 
+const UnmountTestChild1 = () => {
+    const [test, setTest] = useTest();
+    const update = () => {setTest("update1");}
+
+    return <>
+        <span data-testid="child1-test">{test}</span>
+        <button data-testid="child1-btn" onClick={update}>Click!</button>
+    </>;
+}
+
+const UnmountTestChild2 = () => {
+    const [test, setTest] = useTest();
+    const update = () => {setTest("update2");}
+
+    return <>
+        <span data-testid="child2-test">{test}</span>
+        <button data-testid="child2-btn" onClick={update}>Click!</button>
+    </>;
+}
+const UnmountTestParent = () => {
+    const [toggle, setToggle] = React.useState<boolean>(false);
+    const flip = () => {setToggle(t => !t);}
+
+    return <>
+        {toggle && <UnmountTestChild1 />}
+        {!toggle && <UnmountTestChild2 />}
+        <button data-testid="toggle-btn" onClick={flip} >Click!</button>
+    </>;
+}
+
 const Test1 = () => {
     const [test, setTest] = useTest();
     const [foo, setFoo] = useFoo();
@@ -148,6 +178,9 @@ beforeEach(() => {
 
     // Reset spying
     useGlobal.listen.clearAll();
+
+    // Clear all global values
+    useGlobal.clearAll();
 });
 window.localStorage = localStorage;
 
@@ -171,6 +204,16 @@ describe("unstateless", () => {
             fireEvent.click(screen.getByTestId("foo-button1"));
             expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
             expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
+        });
+        it("works when components are [re|un]mounted", () => {
+            render(<UnmountTestParent />);
+            expect(screen.getByTestId("child2-test")).toHaveTextContent("test");
+            fireEvent.click(screen.getByTestId("child2-btn"));
+            expect(screen.getByTestId("child2-test")).toHaveTextContent("update2");
+            fireEvent.click(screen.getByTestId("toggle-btn"));
+            expect(screen.getByTestId("child1-test")).toHaveTextContent("update2");
+            fireEvent.click(screen.getByTestId("toggle-btn"));
+            expect(screen.getByTestId("child2-test")).toHaveTextContent("update2");
         });
         it("shares values with multiple components", () => {
             render(<><Test1 /><Test2 /></>);

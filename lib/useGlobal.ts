@@ -42,6 +42,7 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
             subscribers[index] = new Set<(val:any) => void>();
         }
         subscribers[index].add(setVal);
+        if(curValues[index]) {setVal(curValues[index]);}
         return () => {
             subscribers[index].delete(setVal);
         }        
@@ -87,6 +88,14 @@ useGlobalRaw.listen = {
     clearAll: () => {
         Object.keys(spies).forEach(useGlobalRaw.listen.clear);
     }
+}
+
+useGlobalRaw.clear = (index:string) => {
+    delete curValues[index];
+}
+
+useGlobalRaw.clearAll = () => {
+    Object.keys(curValues).forEach(useGlobalRaw.clear);
 }
 
 export const useGlobal = useGlobalRaw;

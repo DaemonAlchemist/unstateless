@@ -187,6 +187,10 @@ Remove all listeners for a shared value
 
 Remove all listeners for all shared values
 
+#### `useGlobal.clear(index:string), useGlobal.clearAll()`
+
+Clear specified value from the global state, or clear all values from the global state.  Note that calling these functions will _not_ update subscribers.  These functions are currently only used to clear the global state between tests.
+
 ## Injectors
 
 Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only requirement for an injector is that it needs to return the props passed to it in its return object.
