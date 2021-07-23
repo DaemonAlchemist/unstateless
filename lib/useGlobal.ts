@@ -33,7 +33,7 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     }, {});
 
     // Update the subscribers if there are any
-    subscribers[index].forEach((setter) => {setter(newSetter);});
+    (subscribers[index] || []).forEach((setter) => {setter(newSetter);});
 }
 
 const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
