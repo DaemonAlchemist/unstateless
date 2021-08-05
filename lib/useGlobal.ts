@@ -5,9 +5,15 @@ import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 // Record all components who are subscribed to specific global states
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
-
+const getSubscribers = (index:string) => {
+    if(!subscribers[index]) {
+        subscribers[index] = new Set<(val:any) => void>();
+    }
+    return subscribers[index];
+}
 // Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
+const globalSpies:Set<UpdateSpy<any>> = new Set<UpdateSpy<any>>();
 
 // Record the last values for all state.  We need this in case the index for a hook changes,
 // and we need to manually reset the state
@@ -25,26 +31,23 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     const newSetter = memoize((old:T) => {
         const newVal = updateVal(old);
         curValues[index] = newVal;
-        if(!!spies[index]) {
-            spies[index].forEach(spy => {spy(old, newVal);});
-        }
+        (spies[index] || []).forEach(spy => {spy(old, newVal);});
+        globalSpies.forEach(spy => {spy(old, newVal);});
         if(onUpdate) {onUpdate(index, newVal);}
         return newVal;
     }, {});
 
     // Update the subscribers if there are any
-    (subscribers[index] || []).forEach((setter) => {setter(newSetter);});
+    getSubscribers(index).forEach((setter) => {setter(newSetter);});
 }
 
 const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
     React.useEffect(() => {
-        if(!subscribers[index]) {
-            subscribers[index] = new Set<(val:any) => void>();
-        }
-        subscribers[index].add(setVal);
+        const subs = getSubscribers(index);
+        subs.add(setVal);
         if(curValues[index]) {setVal(curValues[index]);}
         return () => {
-            subscribers[index].delete(setVal);
+            subs.delete(setVal);
         }        
     }, [index, get, setVal]);
 }
@@ -79,14 +82,21 @@ useGlobalRaw.listen = {
         }
         spies[index].add(spy);
     },
+    onAll: <T>(spy:UpdateSpy<T>) => {
+        globalSpies.add(spy);
+    },
     off: <T>(index:string, spy:UpdateSpy<T>) => {
         spies[index].delete(spy);
+    },
+    offAll: <T>(spy:UpdateSpy<T>) => {
+        globalSpies.delete(spy);
     },
     clear: (index:string) => {
         spies[index].clear();
     },
     clearAll: () => {
         Object.keys(spies).forEach(useGlobalRaw.listen.clear);
+        globalSpies.clear();
     }
 }
 

@@ -323,5 +323,22 @@ describe("unstateless", () => {
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(1);
         });
-    })
+        it("should allow hooking into all state change events", () => {
+            const test = jest.fn();
+            useGlobal.listen.onAll(test);
+            render(<Test1 />);
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(test).toHaveBeenCalledWith("test", "clicked");
+        });
+        it("should allow removing global listen hooks", () => {
+            const test = jest.fn();
+            useGlobal.listen.onAll(test);
+            render(<Test1 />);
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(test).toHaveBeenCalledWith("test", "clicked");
+            useGlobal.listen.offAll(test);
+            fireEvent.click(screen.getByTestId("button1-2"));
+            expect(test).toHaveBeenCalledTimes(1);
+        });
+    });
 });
