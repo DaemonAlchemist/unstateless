@@ -175,9 +175,17 @@ The base function for both `useSharedState` and `useLocalStorage`.  Use of `useG
 
 This provides a hook into the shared state update process.  Pass in a spy function `(oldVal:T, newVal:T) => void` to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
 
+#### `useGlobal.listen.onAll:  <T>(spy:UpdateSpy<T>) => void`
+
+Add a listener on all state changes rather than a single state element.
+
 #### `useGlobal.listen.off:  <T>(index:string, spy:UpdateSpy<T>) => void`
 
 Remove a previously added state update listener.
+
+#### `useGlobal.listen.offAll:  <T>(spy:UpdateSpy<T>) => void`
+
+Remove a previously added global state update listener.
 
 #### `useGlobal.listen.clear:  (index:string) => void`
 
@@ -187,9 +195,12 @@ Remove all listeners for a shared value
 
 Remove all listeners for all shared values
 
-#### `useGlobal.clear(index:string), useGlobal.clearAll()`
+### Misc Functions
 
-Clear specified value from the global state, or clear all values from the global state.  Note that calling these functions will _not_ update subscribers.  These functions are currently only used to clear the global state between tests.
+#### `useGlobal.clear(index:string)`
+#### `useGlobal.clearAll()`
+
+Clear specified value or all values from the global state.  Note that calling these functions will _not_ update subscribers.  These functions are currently only used internally to clear the global state between tests.
 
 ## Injectors
 
