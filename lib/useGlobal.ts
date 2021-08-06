@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
-import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
+import { GlobalUpdateSpy, IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 // Record all components who are subscribed to specific global states
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
@@ -13,7 +13,7 @@ const getSubscribers = (index:string) => {
 }
 // Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
-const globalSpies:Set<UpdateSpy<any>> = new Set<UpdateSpy<any>>();
+const globalSpies:Set<GlobalUpdateSpy<any>> = new Set<GlobalUpdateSpy<any>>();
 
 // Record the last values for all state.  We need this in case the index for a hook changes,
 // and we need to manually reset the state
@@ -32,7 +32,7 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
         const newVal = updateVal(old);
         curValues[index] = newVal;
         (spies[index] || []).forEach(spy => {spy(old, newVal);});
-        globalSpies.forEach(spy => {spy(old, newVal);});
+        globalSpies.forEach(spy => {spy(old, newVal, index);});
         if(onUpdate) {onUpdate(index, newVal);}
         return newVal;
     }, {});
