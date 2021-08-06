@@ -82,13 +82,13 @@ useGlobalRaw.listen = {
         }
         spies[index].add(spy);
     },
-    onAll: <T>(spy:UpdateSpy<T>) => {
+    onAll: <T>(spy:GlobalUpdateSpy<T>) => {
         globalSpies.add(spy);
     },
     off: <T>(index:string, spy:UpdateSpy<T>) => {
         spies[index].delete(spy);
     },
-    offAll: <T>(spy:UpdateSpy<T>) => {
+    offAll: <T>(spy:GlobalUpdateSpy<T>) => {
         globalSpies.delete(spy);
     },
     clear: (index:string) => {
