@@ -311,14 +311,14 @@ describe("unstateless", () => {
             useGlobal.listen.on("test", test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("test", "clicked");
+            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
         });
         it("should allow removing listen hooks", () => {
             const test = jest.fn();
             useGlobal.listen.on("test", test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("test", "clicked");
+            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
             useGlobal.listen.off("test", test);
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(1);
@@ -328,14 +328,14 @@ describe("unstateless", () => {
             useGlobal.listen.onAll(test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("test", "clicked", "test");
+            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
         });
         it("should allow removing global listen hooks", () => {
             const test = jest.fn();
             useGlobal.listen.onAll(test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("test", "clicked", "test");
+            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
             useGlobal.listen.offAll(test);
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(1);

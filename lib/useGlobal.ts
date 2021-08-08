@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
-import { GlobalUpdateSpy, IUseGlobalOptions, Setter, UpdateSpy } from './types';
+import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 // Record all components who are subscribed to specific global states
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
@@ -13,13 +13,13 @@ const getSubscribers = (index:string) => {
 }
 // Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
-const globalSpies:Set<GlobalUpdateSpy<any>> = new Set<GlobalUpdateSpy<any>>();
+const globalSpies:Set<UpdateSpy<any>> = new Set<UpdateSpy<any>>();
 
 // Record the last values for all state.  We need this in case the index for a hook changes,
 // and we need to manually reset the state
 const curValues:{[index:string]:any} = {};
 
-const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:T) => void) => (newValOrSetter:T | Func<T, T>) => {
+const updateSubscribers = <T>(index: string) => (newValOrSetter:T | Func<T, T>) => {
     // Convert the new value into a setter function if it's a raw value
     const updateVal:Func<T, T> = typeof newValOrSetter === 'function'
         ? newValOrSetter as Func<T, T>
@@ -29,11 +29,15 @@ const updateSubscribers = <T>(index: string, onUpdate?: (index:string, newValue:
     // that the value can updated (if needed) after it's generated.  The wrapper function is
     // memoized, so that the new value is only calculated and updated once.
     const newSetter = memoize((old:T) => {
+        // Update and save the value
         const newVal = updateVal(old);
         curValues[index] = newVal;
-        (spies[index] || []).forEach(spy => {spy(old, newVal);});
-        globalSpies.forEach(spy => {spy(old, newVal, index);});
-        if(onUpdate) {onUpdate(index, newVal);}
+
+        // Send the old and new values to any listeners
+        (spies[index] || []).forEach(spy => {spy(newVal, old, index);});
+        globalSpies.forEach(spy => {spy(newVal, old, index);});
+
+        // Return the new value
         return newVal;
     }, {});
 
@@ -62,7 +66,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
         const [val, setVal] = React.useState<T>(get());
         manageSubscribers<T>(index, get, setVal);
 
-        const set = updateSubscribers<T>(index, options?.onUpdate);
+        const set = updateSubscribers<T>(index);
 
         // If the index of this hook changes, we need to manually update the current state based on the last saved value
         React.useEffect(() => {
@@ -82,13 +86,13 @@ useGlobalRaw.listen = {
         }
         spies[index].add(spy);
     },
-    onAll: <T>(spy:GlobalUpdateSpy<T>) => {
+    onAll: <T>(spy:UpdateSpy<T>) => {
         globalSpies.add(spy);
     },
     off: <T>(index:string, spy:UpdateSpy<T>) => {
         spies[index].delete(spy);
     },
-    offAll: <T>(spy:GlobalUpdateSpy<T>) => {
+    offAll: <T>(spy:UpdateSpy<T>) => {
         globalSpies.delete(spy);
     },
     clear: (index:string) => {

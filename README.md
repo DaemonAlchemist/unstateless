@@ -162,10 +162,9 @@ export const StatefulComponent = connect(StatelessComponent);
 ```
 ### `useGlobal: <T>(options?:IUseGlobalOptions<T>) => (index: string, initialValue:T) => [T, Setter<T>]`
 
-The base function for both `useSharedState` and `useLocalStorage`.  Use of `useGlobal` directly allows for customized behavior.  There are two optional parameters:
+The base function for both `useSharedState` and `useLocalStorage`.  Use of `useGlobal` directly allows for customized behavior.  There is one optional parameter:
 
 - `loadInitialValue: <T>(index:string, initialValue:T) => T`: Provide a function that customizes how the initial value is calculated from a provided default initial value.
-- `onUpdate: <T>(index:string, newValue:T) => void`:  Provide a function that runs after a new value has been updated.
 
 ### Event Listeners
 
@@ -173,7 +172,7 @@ The base function for both `useSharedState` and `useLocalStorage`.  Use of `useG
 
 #### `useGlobal.listen.on:  <T>(index:string, spy:UpdateSpy<T>) => void`
 
-This provides a hook into the shared state update process.  Pass in a spy function `(oldVal:T, newVal:T) => void` to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
+This provides a hook into the shared state update process.  Pass in a spy function `(newVal:T, oldVal:T, index:string) => void` to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
 
 #### `useGlobal.listen.onAll:  <T>(spy:UpdateSpy<T>) => void`
 
@@ -205,3 +204,52 @@ Clear specified value or all values from the global state.  Note that calling th
 ## Injectors
 
 Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only requirement for an injector is that it needs to return the props passed to it in its return object.
+
+## Recipes
+
+Below are code samples that demonstrate some common use cases
+
+### Logging State Changes
+
+```typescript
+useGlobal.listen.onAll((newVal:any, oldVal:any, index:string) => {
+  console.log(`${index} - Updating`);
+  console.log(`${index} - Old value:`);
+  console.log(oldVal);
+  console.log(`${index} - New Value:`);
+  console.log(newVal);
+});
+```
+
+### Persist values to a remote server
+
+```typescript
+import {memoizePromise} from 'ts-functional';
+import {api} from ".../my-app-api";
+
+// Ensure that the product is only loaded once even if multiple
+// components request it at the same time
+const loadProduct = memoizePromise(
+    (productId:number):Promise<IProduct> =>
+        api.product.fetch(productId),
+    {}
+);
+
+const saveProduct = (newProduct:IProduct):Promise<IProduct> =>
+    api.product.save(newProduct);
+
+const useProduct = (productId: number) => {
+    const [product, setProduct] = useSharedState<IProduct | null>(`product-${productId}`, null);
+
+    const updateProduct = (newProduct:IProduct) => {
+        saveProduct(newProduct)
+            .then(setProduct);
+    }
+
+    useEffect(() => {
+        loadProduct(productId).then(setProduct);
+    }, [productId]);
+
+    return [product, updateProduct];
+}
+```

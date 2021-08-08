@@ -2,11 +2,9 @@ import { Func } from "ts-functional/dist/types";
 
 export declare interface IUseGlobalOptions<T> {
     loadInitialValue?: (index:string, initialValue:T) => T;
-    onUpdate?: (index:string, newValue:T) => void;
 }
 
 export declare type Setter<T> = Func<T | Func<T, T>, void>;
-export declare type UpdateSpy<T> = (oldVal:T, newVal:T) => void;
-export declare type GlobalUpdateSpy<T> = (oldVal:T, newVal:T, index:string) => void;
+export declare type UpdateSpy<T> = (newVal:T, oldVal:T, index:string) => void;
 
 export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;

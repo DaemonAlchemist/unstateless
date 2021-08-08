@@ -17,14 +17,18 @@ const loadLocalStorageValue = <T>(deserialize:Func<string, T>, serialize:Func<T,
     return parsedVal;
 };
 
-const saveLocalStorageValue = <T>(serialize:Func<T, string>) => (index:string, newValue:T) => {
+const saveLocalStorageValue = <T>(serialize:Func<T, string>) => (newValue:T, oldVal:T, index:string) => {
     window.localStorage.setItem(index, serialize(newValue));
 }
 
-const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => useGlobal<T>({
-    loadInitialValue: loadLocalStorageValue<T>(options.deserialize, options.serialize),
-    onUpdate: saveLocalStorageValue<T>(options.serialize),
-});
+const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => {
+    const save = saveLocalStorageValue<T>(options.serialize);
+    const loadInitialValue = loadLocalStorageValue<T>(options.deserialize, options.serialize);
+    return (index: string, initialValue:T) => {
+        useGlobal.listen.on(index, save);
+        return useGlobal<T>({loadInitialValue})(index, initialValue);
+    };
+}
 
 useLocalStorageRaw.string = (index: string, i:string) =>
     useLocalStorageRaw<string>({deserialize: (a:string) => a, serialize:(a:string) => a})(index, i);
