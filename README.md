@@ -12,6 +12,23 @@ Note that unlike other libraries that use React's context management infrastruct
 
 ## Basic Usage Example
 
+```typescript
+import React from 'react';
+import {useSharedState} from "unstateless";
+	
+export const SomeComponent = (props:any) => {
+    // The useSharedState and useLocalStorage hooks work just like React's useState hook
+    const [userName, setUserName] = useSharedState<string>("userName", "");
+    
+    return <>
+        {userName}
+        <button onClick={() => {setUserName("A New Name")}>Click!</button>
+    </>;
+}
+```
+
+## More complete usage Example
+
 /libs/hooks.ts
 ```typescript
 import { Setter, useLocalStorage, useSharedState } from "unstateless";
