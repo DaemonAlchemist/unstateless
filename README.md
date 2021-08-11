@@ -10,7 +10,7 @@
 
 Note that unlike other libraries that use React's context management infrastructure to pass global values down to components, `unstateless` does *not* require your application to be wrapped in a custom provider component.  `useSharedState` and `useLocalStorage` can be directly used in existing React components without any extra boilerplate.  They are also independent hooks, and do not need to be used with `mergeProps` and `inject`.
 
-## Basic Usage Example
+## Basic usage example
 
 ```typescript
 import React from 'react';
@@ -27,7 +27,7 @@ export const SomeComponent = (props:any) => {
 }
 ```
 
-## More complete usage Example
+## More complete usage example
 
 /libs/hooks.ts
 ```typescript
