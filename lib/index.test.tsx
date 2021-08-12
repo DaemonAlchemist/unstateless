@@ -94,6 +94,18 @@ const Test3 = () => {
     </>;
 }
 
+const Test4 = (props:{onRender:() => void}) => {
+    const [test, setTest] = useTest();
+    const updateTest = () => {setTest("test");}
+
+    props.onRender();
+
+    return <>
+        <div data-testid="test1">{test}</div>
+        <button data-testid="button1" onClick={updateTest} >Click</button>
+    </>;
+}
+
 const usePreset1 = () => useLocalStorage.string("preset1", "shouldnt-be-set");
 const usePreset2 = () => useLocalStorage.number("preset2", 0);
 const usePreset3 = () => useLocalStorage.boolean("preset3", false);
@@ -204,6 +216,15 @@ describe("unstateless", () => {
             fireEvent.click(screen.getByTestId("foo-button1"));
             expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
             expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
+        });
+        it("should not rerender if a value does not change", () => {
+            const onRender = jest.fn();
+            render(<Test4 onRender={onRender}/>);
+            expect(screen.getByTestId("test1")).toHaveTextContent("test");
+            expect(onRender).toHaveBeenCalledTimes(1);
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("test");
+            expect(onRender).toHaveBeenCalledTimes(1);
         });
         it("works when components are [re|un]mounted", () => {
             render(<UnmountTestParent />);
