@@ -3,6 +3,7 @@ import { useGlobal } from "./useGlobal";
 
 export { inject } from "./inject";
 export { Injector, IUseGlobalOptions, Setter, UpdateSpy } from "./types.d";
+export { useDerivedState } from './useDerivedState';
 export { useGlobal } from './useGlobal';
 export { useLocalStorage } from "./useLocalStorage";
 

@@ -2,10 +2,12 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { inject, mergeProps, useGlobal, useLocalStorage, useSharedState } from '.';
+import { inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
+import { curValues } from './useGlobal';
 
 const useTest = () => useSharedState("test", "test");
 const useFoo = () => useSharedState("foo", "foo");
+const useCompound = () => useSharedState("compound", {a: 1, b: 2});
 
 const DependentStateTest = () => {
     const [a, setA] = useSharedState<string>("master", "foo");
@@ -103,6 +105,53 @@ const Test4 = (props:{onRender:() => void}) => {
     return <>
         <div data-testid="test1">{test}</div>
         <button data-testid="button1" onClick={updateTest} >Click</button>
+    </>;
+}
+
+const TestCompound1 = () => {
+    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+
+    return <div data-testid="test">{test}</div>
+}
+
+const TestCompound2 = () => {
+    const [obj, setObj] = useCompound();
+    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+
+    return <>
+        <div data-testid="test-obj">{obj.b}</div>
+        <div data-testid="test">{test}</div>
+    </>;
+}
+
+const TestDerivedChild = (props:{onRender:() => void}) => {
+    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+    props.onRender();
+    return <>
+        <div data-testid="test">{test}</div>
+    </>;
+}
+
+const TestDerivedChild2 = (props:{onRender:() => void}) => {
+    const [test, setTest] = useCompound();
+    const update = () => {
+        setTest(old => ({
+            ...old,
+            b: 5
+        }));
+    }
+props.onRender();
+    return <>
+        <div data-testid="test-obja">{test.a}</div>
+        <div data-testid="test-objb">{test.b}</div>
+        <button data-testid="btn" onClick={update}>Click</button>
+    </>;
+}
+
+const TestDerivedParent = (props:{onRenderChild:() => void, onRenderMain:() => void}) => {
+    return <>
+        <TestDerivedChild onRender={props.onRenderChild} />
+        <TestDerivedChild2 onRender={props.onRenderMain} />
     </>;
 }
 
@@ -217,6 +266,10 @@ describe("unstateless", () => {
             expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
             expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
         });
+        it("saves current values upon initial render", () => {
+            render(<Test1 />);
+            expect(curValues.test).toEqual("test");
+        });
         it("should not rerender if a value does not change", () => {
             const onRender = jest.fn();
             render(<Test4 onRender={onRender}/>);
@@ -316,6 +369,33 @@ describe("unstateless", () => {
             expect(screen.getByTestId("b")).toHaveTextContent("4");
         })
     });
+    describe("useDerivedState", () => {
+        it("should use an initial value if the state is not set", () => {
+            render(<TestCompound1 />);
+            expect(screen.getByTestId("test")).toHaveTextContent("0");
+        });
+        it("should derive state using the specified extractor", () => {
+            render(<TestCompound2 />);
+            expect(screen.getByTestId("test-obj")).toHaveTextContent("2");
+            expect(screen.getByTestId("test")).toHaveTextContent("1");
+        });
+        it("should not rerender if the derived data does not change", () => {
+            const onRenderChild = jest.fn();
+            const onRenderMain = jest.fn();
+            render(<TestDerivedParent onRenderChild={onRenderChild} onRenderMain={onRenderMain} />);
+            expect(screen.getByTestId("test")).toHaveTextContent("1");
+            expect(screen.getByTestId("test-obja")).toHaveTextContent("1");
+            expect(screen.getByTestId("test-objb")).toHaveTextContent("2");
+            expect(onRenderMain).toHaveBeenCalledTimes(1);
+            expect(onRenderChild).toHaveBeenCalledTimes(3);
+            fireEvent.click(screen.getByTestId("btn"));
+            expect(screen.getByTestId("test")).toHaveTextContent("1");
+            expect(screen.getByTestId("test-obja")).toHaveTextContent("1");
+            expect(screen.getByTestId("test-objb")).toHaveTextContent("5");
+            expect(onRenderMain).toHaveBeenCalledTimes(3);
+            expect(onRenderChild).toHaveBeenCalledTimes(3);
+        })
+    });
     describe("inject", () => {
         it("should inject props into components", () => {
             render(<TestInjectStateful />);
@@ -334,15 +414,22 @@ describe("unstateless", () => {
             fireEvent.click(screen.getByTestId("button1"));
             expect(test).toHaveBeenCalledWith("clicked", "test", "test");
         });
+        it("should run a new listener if the listened value has already been set", () => {
+            const test = jest.fn();
+            render(<Test1 />);
+            useGlobal.listen.on("test", test);
+            expect(test).toHaveBeenCalledWith("test", "test", "test");
+        });
         it("should allow removing listen hooks", () => {
             const test = jest.fn();
             useGlobal.listen.on("test", test);
             render(<Test1 />);
+            expect(test).toHaveBeenCalledTimes(1);
             fireEvent.click(screen.getByTestId("button1"));
             expect(test).toHaveBeenCalledWith("clicked", "test", "test");
             useGlobal.listen.off("test", test);
             fireEvent.click(screen.getByTestId("button1-2"));
-            expect(test).toHaveBeenCalledTimes(1);
+            expect(test).toHaveBeenCalledTimes(2);
         });
         it("should allow hooking into all state change events", () => {
             const test = jest.fn();
@@ -351,15 +438,23 @@ describe("unstateless", () => {
             fireEvent.click(screen.getByTestId("button1"));
             expect(test).toHaveBeenCalledWith("clicked", "test", "test");
         });
+        it("should run new global listeners immediately if values have been set", () => {
+            const test = jest.fn();
+            render(<Test1 />);
+            useGlobal.listen.onAll(test);
+            expect(test).toHaveBeenCalledWith("test", "test", "test");
+        });
         it("should allow removing global listen hooks", () => {
             const test = jest.fn();
             useGlobal.listen.onAll(test);
             render(<Test1 />);
+            expect(test).toHaveBeenCalledTimes(2);
             fireEvent.click(screen.getByTestId("button1"));
             expect(test).toHaveBeenCalledWith("clicked", "test", "test");
+            expect(test).toHaveBeenCalledTimes(3);
             useGlobal.listen.offAll(test);
             fireEvent.click(screen.getByTestId("button1-2"));
-            expect(test).toHaveBeenCalledTimes(1);
+            expect(test).toHaveBeenCalledTimes(3);
         });
     });
 });

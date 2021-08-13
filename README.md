@@ -4,6 +4,7 @@
 
 - `useSharedState`: A React hook that allows state to be shared among several components.  Changing the state anywhere will cause all components that use that hook to rerender.
 - `useLocalStorage`:  The same as useSharedState, except the current value is persisted in localStorage.
+- `useDerivedState`: An optimization hook that listens to one or more shared state changes, and derives new state data from them.
 - `mergeProps`: A function that allows property injector functions to be chained together.
 - `inject`:  A function that creates a higher-order component that injects the specified props into a component.
 - `useGlobal.listen`: Provides hooks into shared state changes.  Use this to log state updates or provide middle-ware like logic on state changes.
@@ -162,6 +163,10 @@ The `useLocalStorage` hook works the same as the `useSharedState` hook.  The onl
 #### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => [T, Setter<T>]`
 
 However, you can also use `useLocalStorage` directly if you need custom serialize/deserialize functions.
+
+### `useDerivedState: <T>(indexes:string[], extractor:((...args:any[]) => T)) => T`
+
+The `useDerivedState` hook allows components to depend on derived data from one or more shared state values.  This hook is optimized so that even if the source state changes, the component will not rerender unless the derived data also changes.  The `indexes` parameter defines which state the hook depends on.  The values of those state variables will be passed in order to the `extractor` function.  Note that the extractor function also needs to return a sane value if any or all of the source variables are undefined.
 
 ### `mergeProps`
 

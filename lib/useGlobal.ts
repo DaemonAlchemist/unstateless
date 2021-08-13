@@ -14,10 +14,17 @@ const getSubscribers = (index:string) => {
 // Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
 const globalSpies:Set<UpdateSpy<any>> = new Set<UpdateSpy<any>>();
+const callListeners = (newVal:any, oldVal:any, index:string) => {
+    (spies[index] || []).forEach(spy => {spy(newVal, oldVal, index);});
+    globalSpies.forEach(spy => {spy(newVal, oldVal, index);});
+}
 
 // Record the last values for all state.  We need this in case the index for a hook changes,
 // and we need to manually reset the state
-const curValues:{[index:string]:any} = {};
+export const curValues:{[index:string]:any} = {};
+const setCurValue = (index:string, obj:any) => {
+    curValues[index] = obj;
+}
 
 const updateSubscribers = <T>(index: string) => (newValOrSetter:T | Func<T, T>) => {
     // Convert the new value into a setter function if it's a raw value
@@ -31,11 +38,11 @@ const updateSubscribers = <T>(index: string) => (newValOrSetter:T | Func<T, T>) 
     const newSetter = memoize((old:T) => {
         // Update and save the value
         const newVal = updateVal(old);
-        curValues[index] = newVal;
 
-        // Send the old and new values to any listeners
-        (spies[index] || []).forEach(spy => {spy(newVal, old, index);});
-        globalSpies.forEach(spy => {spy(newVal, old, index);});
+        if(newVal !== old) {
+            setCurValue(index, newVal);
+            callListeners(newVal, old, index);
+        }
 
         // Return the new value
         return newVal;
@@ -58,12 +65,19 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
 
 const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
     (index: string, initialValue:T):[T, Setter<T>] => {
-        const get:Func<void, T> = !!options && !!options.loadInitialValue
-            ? () => (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
-            : () => initialValue;
+        const get:Func<void, T> = () => {
+            const initial = !!options && !!options.loadInitialValue
+                ? (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
+                : initialValue;
+            if(typeof curValues[index] === "undefined") {
+                setCurValue(index, initial);
+                callListeners(initial, initial, index);
+            }
+            return initial;
+        }
 
         const [curIndex, setCurIndex] = React.useState(index);
-        const [val, setVal] = React.useState<T>(get());
+        const [val, setVal] = React.useState<T>(get);
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index);
@@ -85,9 +99,15 @@ useGlobalRaw.listen = {
             spies[index] = new Set<UpdateSpy<T>>();
         }
         spies[index].add(spy);
+        if(typeof curValues[index] !== "undefined") {
+            spy(curValues[index], curValues[index], index);
+        }
     },
     onAll: <T>(spy:UpdateSpy<T>) => {
         globalSpies.add(spy);
+        Object.keys(curValues).forEach(index => {
+            spy(curValues[index], curValues[index], index);
+        });
     },
     off: <T>(index:string, spy:UpdateSpy<T>) => {
         spies[index].delete(spy);
