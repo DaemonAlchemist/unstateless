@@ -65,7 +65,7 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
 
 const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
     (index: string, initialValue:T):[T, Setter<T>] => {
-        const get:Func<void, T> = () => {
+        const get = () => {
             const initial = !!options && !!options.loadInitialValue
                 ? (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
                 : initialValue;
