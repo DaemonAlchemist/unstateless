@@ -1,15 +1,9 @@
 # Unstateless
 
-`unstateless` is a state management library for React that allows the creation of injectable, persistent, shared state hooks.  With `unstateless`, stateless components can be "upgraded" into stateful components by injecting React hooks as props.  `unstateless` is intended to be an alternative to other state management libraries such as Redux, although it can be used in conjunction with them.  `unstateless` exports several functions that work together to manage your application's state:
+`unstateless` is a shared state management library for React.  It's main design goals are:
 
-- `useSharedState`: A React hook that allows state to be shared among several components.  Changing the state anywhere will cause all components that use that hook to rerender.
-- `useLocalStorage`:  The same as useSharedState, except the current value is persisted in localStorage.
-- `useDerivedState`: An optimization hook that listens to one or more shared state changes, and derives new state data from them.
-- `mergeProps`: A function that allows property injector functions to be chained together.
-- `inject`:  A function that creates a higher-order component that injects the specified props into a component.
-- `useGlobal.listen`: Provides hooks into shared state changes.  Use this to log state updates or provide middle-ware like logic on state changes.
-
-Note that unlike other libraries that use React's context management infrastructure to pass global values down to components, `unstateless` does *not* require your application to be wrapped in a custom provider component.  `useSharedState` and `useLocalStorage` can be directly used in existing React components without any extra boilerplate.  They are also independent hooks, and do not need to be used with `mergeProps` and `inject`.
+- `Zero boilerplate`: Creating and using a shared state variable shouldn't require any code other than the definition of the variable.
+- `Natural`: Shared state should be just as easy to use as local state and shouldn't require learning any additional concepts.
 
 ## Basic usage example
 
@@ -17,9 +11,10 @@ Note that unlike other libraries that use React's context management infrastruct
 import React from 'react';
 import {useSharedState} from "unstateless";
 	
+const useUsername = () => useSharedState<string>("userName", "");
+
 export const SomeComponent = (props:any) => {
-    // The useSharedState and useLocalStorage hooks work just like React's useState hook
-    const [userName, setUserName] = useSharedState<string>("userName", "");
+    const [userName, setUserName] = useUsername();
     
     return <>
         {userName}
@@ -28,7 +23,16 @@ export const SomeComponent = (props:any) => {
 }
 ```
 
-## More complete usage example
+## Features
+
+- `Drop-in replacement`: React's `useState` hooks can be directly replaced with Unstateless's `useSharedState` to lift a local variable into a shared variable.  In additional, Unstatless's `inject` functionality can be used to directly replace react-redux's `map<X>ToProps` functions.
+- `Minimal boilerplate`: Basic shared state requires no boilerplate and no top-level provider wrapping your application.
+- `Composable`: Unstateless can be used to create reusable state and effects that can be injected into any component.
+- `Extensible`: The `useGlobal` core object can be extended to create custom shared state handlers, and listeners can be used to act on any or all state changes.
+- `Hook-based`: Unstateless exposes several custom React hooks for managing shared state.
+- `Compatibile`: Unstateless can be used along side other state management libraries such as Redux.
+
+## Detailed usage example
 
 /libs/hooks.ts
 ```typescript
@@ -148,11 +152,42 @@ export const ScreenSelector = connect((props:Props) =>
 
 ### `useSharedState: <T>(stateId: string, initialValue:T) => [T, Setter<T>]`
 
-The `useSharedState` hook works the same as the standard React `useState` hook.  The only difference is that you need to provide an `stateId` parameter to hook up to the correct global state.  The first value of the returned tuple will be the current value of the state.  The second value of the tuple will be a setter function that takes either a new `T` value or a function `(old:T) => T` that calculates the new value from the old value.  When the state is updated, all components hooked up to that state will re-render.
+The `useSharedState` hook is the simplest way to share state between components.  You can use it directly in a component,
+
+```typescript
+export const MyComponent = (...) => {
+    const [myVar, setMyVar] = useSharedState("myVar", defaultValue);
+    ...
+}
+```
+
+or define a custom hook to prevent duplicate code.
+
+```typescript
+// .../util.ts
+export const useMyVar = () => useSharedState("myVar", defaultValue);
+
+// .../MyComponent.ts
+import {useMyVar} from ".../util.ts";
+
+export const MyComponent = (...) => {
+    const [myVar, setMyVar] = useMyVar();
+    ...
+}
+
+```
+
+When the shared state is updated by any component, all components hooked up to that state will re-render.
+
+The `useSharedState` hook is similar to React's `useState` hook and returns the same tuple (`[value, setValue]`).  The only difference is that you need to provide a `stateId` parameter to identify the global state variable.
+
+---
 
 ### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => [T, Setter<T>]`
 
-The `useLocalStorage` hook works the same as the `useSharedState` hook.  The only difference is that the latest state is persisted in localStorage.  When the app is re-loaded, this hook will first check localStorage for an existing value to use as the initial value.  If no value is found in localStorage, this hook will use the provided `initialValue` instead to bootstrap the state.  You need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
+The `useLocalStorage` hook works just like the `useSharedState` hook except that the latest state is persisted in localStorage.  When the app is re-loaded, the `useLocalStorage` hook will first check localStorage for an existing value.  If no value is found in localStorage, the `initialValue` provided will be used to initialize the state.
+
+If you use the `useLocalStorage` function directly, you need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
 
 #### `useLocalStorage.string: (stateId: string, initialValue:string) => [string, Setter<string>]`
 
@@ -164,17 +199,29 @@ The `useLocalStorage` hook works the same as the `useSharedState` hook.  The onl
 
 However, you can also use `useLocalStorage` directly if you need custom serialize/deserialize functions.
 
+---
+
 ### `useDerivedState: <T>(indexes:string[], extractor:((...args:any[]) => T)) => T`
 
-The `useDerivedState` hook allows components to depend on derived data from one or more shared state values.  This hook is optimized so that even if the source state changes, the component will not rerender unless the derived data also changes.  The `indexes` parameter defines which state the hook depends on.  The values of those state variables will be passed in order to the `extractor` function.  Note that the extractor function also needs to return a sane value if any or all of the source variables are undefined.
+The `useDerivedState` hook allows components to derive new state data from one or more shared state values.  The main purpose of this hook is to prevent unnecessary rerenders;  Even if the source state variables change, components that use the `useDerivedState` hook will not re-render unless the derived data also changes.
 
-### `mergeProps`
+The `indexes` parameter defines which state the hook depends on.  The values of those state variables will be passed as arguments in that order to the `extractor` function.
 
-The `mergeProps` function is used to chain together several property injectors.  Under the hood, it is simply a function compositor that composites the injectors from left to right.  It expects the injector functions to have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, an injector function should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
+`Note`: The extractor function may run before the shared state variables have been initialized, so it also needs to return a sane value if any or all of the source variables are undefined.
+
+---
 
 ### `inject: <A extends {}, B extends {}>(injector:Injector<A, B>) => (Component:React.ComponentType<B>) => (props:A) => JSX.Element`
 
-The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  It works in a similar manner to Redux's `connect` function.
+The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  It works in a similar manner to react-redux's `connect` function.
+
+Injectors should have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, injectors should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
+
+---
+
+### `mergeProps`
+
+The `mergeProps` function is used to chain together several property injectors.  Under the hood, it is simply a function compositor that composites the injectors from left to right.
 
 ```typescript
 const injector = mergeProps(injectThis, injectThat, injectSomethingElse);
@@ -182,19 +229,28 @@ const connect = inject(injector);
 const StatelessComponent = (props) => <>...</>;
 export const StatefulComponent = connect(StatelessComponent);
 ```
+
+---
+
 ### `useGlobal: <T>(options?:IUseGlobalOptions<T>) => (index: string, initialValue:T) => [T, Setter<T>]`
 
 The base function for both `useSharedState` and `useLocalStorage`.  Use of `useGlobal` directly allows for customized behavior.  There is one optional parameter:
 
 - `loadInitialValue: <T>(index:string, initialValue:T) => T`: Provide a function that customizes how the initial value is calculated from a provided default initial value.
 
+---
+
 ### Event Listeners
 
-`unstateless` also provides the `useGlobal.listen` object for hooking into shared state changes.
+`unstateless` also provides the `useGlobal.listen` object for hooking into shared state changes.  Whenever a shared variable is initialized or changes, any attached listeners will also run.
+
+#### `type UpdateSpy<T> = (newVal:T, oldVal:T, index:string) => void`
+
+---
 
 #### `useGlobal.listen.on:  <T>(index:string, spy:UpdateSpy<T>) => void`
 
-This provides a hook into the shared state update process.  Pass in a spy function `(newVal:T, oldVal:T, index:string) => void` to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
+This provides a hook into the shared state update process.  Pass in a spy function to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
 
 #### `useGlobal.listen.onAll:  <T>(spy:UpdateSpy<T>) => void`
 
@@ -215,6 +271,8 @@ Remove all listeners for a shared value
 #### `useGlobal.listen.clearAll:  () => void`
 
 Remove all listeners for all shared values
+
+---
 
 ### Misc Functions
 
