@@ -1,5 +1,9 @@
-import { useGlobal } from "./useGlobal";
+import { Guid } from 'guid-typescript';
+import * as StackTrace from 'stacktrace-js';
 import { Func } from "ts-functional/dist/types";
+import { indexErrorMessage } from '.';
+import { ISharedState, ISharedStateFunction } from './types';
+import { useGlobal } from "./useGlobal";
 
 const loadLocalStorageValue = <T>(deserialize:Func<string, T>, serialize:Func<T, string>) => (index:string, initialValue:T) => {
     const localVal = window.localStorage.getItem(index);
@@ -21,22 +25,28 @@ const saveLocalStorageValue = <T>(serialize:Func<T, string>) => (newValue:T, old
     window.localStorage.setItem(index, serialize(newValue));
 }
 
-const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => {
+const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}):ISharedStateFunction => {
     const save = saveLocalStorageValue<T>(options.serialize);
     const loadInitialValue = loadLocalStorageValue<T>(options.deserialize, options.serialize);
-    return (index: string, initialValue:T) => {
-        useGlobal.listen.on(index, save);
-        return useGlobal<T>({loadInitialValue})(index, initialValue);
+    return (initialValue:T | string, i?:T | string):ISharedState<T> => {
+        const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
+        if(isRendering && !i) {
+            throw indexErrorMessage;
+        }
+
+        const initial:T = (!!i ? i : initialValue) as T;
+        const index:string = (!!i ? initialValue : Guid.create().toString()) as string;
+        const f = () => useGlobal<T>({loadInitialValue})(index, initial);
+        f.__index__ = index;
+        useGlobal.listen.on(f, save);
+        return f;
     };
 }
 
-useLocalStorageRaw.string = (index: string, i:string) =>
-    useLocalStorageRaw<string>({deserialize: (a:string) => a, serialize:(a:string) => a})(index, i);
-useLocalStorageRaw.number = (index: string, i:number) =>
-    useLocalStorageRaw<number>({deserialize: (a:string) => +a, serialize:(a:number) => `${a}`})(index, i);
-useLocalStorageRaw.boolean = (index: string, i:boolean) =>
-    useLocalStorageRaw<boolean>({deserialize: (a:string) => !!a, serialize:(a:boolean) => a ? "1" : ""})(index, i);
-useLocalStorageRaw.object = <T extends {}>(index: string, i:T) =>
-    useLocalStorageRaw<T>({deserialize: JSON.parse, serialize: JSON.stringify})(index, i);
+useLocalStorageRaw.string  = useLocalStorageRaw<string >({deserialize: (a:string) => a,   serialize:(a:string) => a            });
+useLocalStorageRaw.number  = useLocalStorageRaw<number >({deserialize: (a:string) => +a,  serialize:(a:number) => `${a}`       });
+useLocalStorageRaw.boolean = useLocalStorageRaw<boolean>({deserialize: (a:string) => !!a, serialize:(a:boolean) => a ? "1" : ""});
+useLocalStorageRaw.object = <T extends {}>(initial:T | string, i?:T | string) =>
+    useLocalStorageRaw<T>({deserialize: JSON.parse, serialize: JSON.stringify})(initial as any, i);
 
 export const useLocalStorage = useLocalStorageRaw;

@@ -11,7 +11,7 @@
 import React from 'react';
 import {useSharedState} from "unstateless";
 	
-const useUsername = () => useSharedState<string>("userName", "");
+const useUsername = useSharedState<string>("Original Name");
 
 export const SomeComponent = (props:any) => {
     const [userName, setUserName] = useUsername();
@@ -25,7 +25,7 @@ export const SomeComponent = (props:any) => {
 
 ## Features
 
-- `Drop-in replacement`: React's `useState` hooks can be directly replaced with Unstateless's `useSharedState` to lift a local variable into a shared variable.  In additional, Unstatless's `inject` functionality can be used to directly replace react-redux's `map<X>ToProps` functions.
+- `Drop-in replacement`: React's `useState` hooks can be directly replaced with Unstateless's `useSharedState` to lift a local variable into a shared variable.  In additional, Unstateless's `inject` functionality can be used to directly replace react-redux's `map<X>ToProps` functions.
 - `Minimal boilerplate`: Basic shared state requires no boilerplate and no top-level provider wrapping your application.
 - `Composable`: Unstateless can be used to create reusable state and effects that can be injected into any component.
 - `Extensible`: The `useGlobal` core object can be extended to create custom shared state handlers, and listeners can be used to act on any or all state changes.
@@ -45,7 +45,7 @@ export interface IWorkspace {
     setWorkspace: Setter<string>;
 }
 
-export const useWorkspace = () => useSharedState<string>("workspace", "");
+export const useWorkspace = useSharedState<string>("");
 
 export const injectWorkspace = <T>(props:T):T & IWorkspace => {
     const [workspace, setWorkspace] = useWorkspace();
@@ -60,7 +60,7 @@ export interface ICurrentScreen {
     setScreen: Setter<string>;
 }
 
-export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "");
+export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "")();
 
 export const injectCurrentScreen = <T extends IWorkspace>(props:T):T & ICurrentScreen => {
     const [screen, setScreen] = useCurrentScreen<string>(props.workspace);
@@ -150,22 +150,22 @@ export const ScreenSelector = connect((props:Props) =>
 ```
 ## Public API
 
-### `useSharedState: <T>(stateId: string, initialValue:T) => [T, Setter<T>]`
-
-The `useSharedState` hook is the simplest way to share state between components.  You can use it directly in a component,
+### `useSharedState: <T>(initialValue:T) => () => [T, Setter<T>]`
+### `useSharedState: <T>(stateId: string, initialValue:T) => () => [T, Setter<T>]`
+The `useSharedState` hook is the simplest way to share state between components.  You can use it directly inside a component,
 
 ```typescript
 export const MyComponent = (...) => {
-    const [myVar, setMyVar] = useSharedState("myVar", defaultValue);
+    const [myVar, setMyVar] = useSharedState("myVar", defaultValue)();
     ...
 }
 ```
 
-or define a custom hook to prevent duplicate code.
+or define a custom hook which allows you to skip defining a stateId.
 
 ```typescript
 // .../util.ts
-export const useMyVar = () => useSharedState("myVar", defaultValue);
+export const useMyVar = useSharedState(defaultValue);
 
 // .../MyComponent.ts
 import {useMyVar} from ".../util.ts";
@@ -179,33 +179,55 @@ export const MyComponent = (...) => {
 
 When the shared state is updated by any component, all components hooked up to that state will re-render.
 
-The `useSharedState` hook is similar to React's `useState` hook and returns the same tuple (`[value, setValue]`).  The only difference is that you need to provide a `stateId` parameter to identify the global state variable.
+The `useSharedState` function returns a hook that is similar to React's `useState` hook and returns the same tuple (`[value, setValue]`).
 
 ---
 
-### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => [T, Setter<T>]`
-
+### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (initialValue:T) => () => [T, Setter<T>]`
+### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => () => [T, Setter<T>]`
 The `useLocalStorage` hook works just like the `useSharedState` hook except that the latest state is persisted in localStorage.  When the app is re-loaded, the `useLocalStorage` hook will first check localStorage for an existing value.  If no value is found in localStorage, the `initialValue` provided will be used to initialize the state.
 
 If you use the `useLocalStorage` function directly, you need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
 
-#### `useLocalStorage.string: (stateId: string, initialValue:string) => [string, Setter<string>]`
+#### `useLocalStorage.string: (initialValue:string) => () => [string, Setter<string>]`
+#### `useLocalStorage.string: (stateId: string, initialValue:string) => () => [string, Setter<string>]`
 
-#### `useLocalStorage.number: (stateId: string, initialValue:number) => [number, Setter<number>]`
-
-#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean) => [boolean, Setter<boolean>]`
-
-#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => [T, Setter<T>]`
+---
+#### `useLocalStorage.number: (initialValue:number) => () => [number, Setter<number>]`
+#### `useLocalStorage.number: (stateId: string, initialValue:number) => () => [number, Setter<number>]`
+---
+#### `useLocalStorage.boolean: (initialValue:boolean) => () => [boolean, Setter<boolean>]`
+#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean) => () => [boolean, Setter<boolean>]`
+---
+#### `useLocalStorage.object: <T extends {}>(initialValue:T) => () => [T, Setter<T>]`
+#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => () => [T, Setter<T>]`
 
 However, you can also use `useLocalStorage` directly if you need custom serialize/deserialize functions.
 
 ---
 
-### `useDerivedState: <T>(indexes:string[], extractor:((...args:any[]) => T)) => T`
+### `useDerivedState: <T>(states:ISharedState<any>[], extractor:((...args:any[]) => T)) => T`
 
 The `useDerivedState` hook allows components to derive new state data from one or more shared state values.  The main purpose of this hook is to prevent unnecessary rerenders;  Even if the source state variables change, components that use the `useDerivedState` hook will not re-render unless the derived data also changes.
 
-The `indexes` parameter defines which state the hook depends on.  The values of those state variables will be passed as arguments in that order to the `extractor` function.
+The `states` parameter defines which state the hook depends on.  You should pass in the custom hooks that define the shared state variables:
+
+```typescript
+const useFoo = useSharedState<string>("some value");
+const useBar = useSharedState<string>("another value");
+
+const MyComponent = () => {
+    const combined = useDerivedState(
+        [useFoo, useBar],
+        (foo:string, bar:string) => `${foo} - ${bar}`
+    );
+
+    return <div>{combined}</div>;
+}
+
+```
+
+The values of those state variables will be passed as arguments in that order to the `extractor` function.
 
 `Note`: The extractor function may run before the shared state variables have been initialized, so it also needs to return a sane value if any or all of the source variables are undefined.
 
@@ -248,7 +270,7 @@ The base function for both `useSharedState` and `useLocalStorage`.  Use of `useG
 
 ---
 
-#### `useGlobal.listen.on:  <T>(index:string, spy:UpdateSpy<T>) => void`
+#### `useGlobal.listen.on:  <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => void`
 
 This provides a hook into the shared state update process.  Pass in a spy function to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
 
@@ -256,7 +278,7 @@ This provides a hook into the shared state update process.  Pass in a spy functi
 
 Add a listener on all state changes rather than a single state element.
 
-#### `useGlobal.listen.off:  <T>(index:string, spy:UpdateSpy<T>) => void`
+#### `useGlobal.listen.off:  <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => void`
 
 Remove a previously added state update listener.
 
@@ -264,7 +286,7 @@ Remove a previously added state update listener.
 
 Remove a previously added global state update listener.
 
-#### `useGlobal.listen.clear:  (index:string) => void`
+#### `useGlobal.listen.clear:  (state:ISharedState<T>) => void`
 
 Remove all listeners for a shared value
 
@@ -319,7 +341,7 @@ const saveProduct = (newProduct:IProduct):Promise<IProduct> =>
     api.product.save(newProduct);
 
 const useProduct = (productId: number) => {
-    const [product, setProduct] = useSharedState<IProduct | null>(`product-${productId}`, null);
+    const [product, setProduct] = useSharedState<IProduct | null>(`product-${productId}`, null)();
 
     const updateProduct = (newProduct:IProduct) => {
         saveProduct(newProduct)

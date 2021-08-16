@@ -1,24 +1,25 @@
 import * as React from 'react';
+import { ISharedState } from './types';
 import { curValues, useGlobal } from './useGlobal';
 
-export const useDerivedState = <T>(indexes:string[], extractor:((...args:any[]) => T)):T => {
+export const useDerivedState = <T>(states:ISharedState<any>[], extractor:((...args:any[]) => T)):T => {
     const [derivedValue, setDerivedValue] = React.useState<T>(extractor());
 
     const listener = React.useCallback((newVal:any, oldVal:any, index:any) => {
-        setDerivedValue(extractor(...(indexes.map(index => curValues[index]))))
-    }, [indexes, extractor]);
+        setDerivedValue(extractor(...(states.map(index => curValues[index.__index__]))))
+    }, [states, extractor]);
 
     React.useEffect(() => {
-        indexes.forEach(index => {
+        states.forEach(index => {
             useGlobal.listen.on(index, listener);
         });
         
         return () => {
-            indexes.forEach(index => {
+            states.forEach(index => {
                 useGlobal.listen.off(index, listener);
             });
         }
-    }, [indexes]);
+    }, [states]);
 
-    return derivedValue
+    return derivedValue;
 }

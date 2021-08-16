@@ -8,3 +8,13 @@ export declare type Setter<T> = Func<T | Func<T, T>, void>;
 export declare type UpdateSpy<T> = (newVal:T, oldVal:T, index:string) => void;
 
 export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;
+
+export declare interface ISharedState<T> {
+    (): [T, Setter<T>];
+    __index__: string;
+}
+
+export declare interface ISharedStateFunction {
+    <T>(initialValue:T): ISharedState<T>;
+    <T>(index: string, initialValue:T): ISharedState<T>;
+}

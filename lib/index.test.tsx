@@ -2,16 +2,16 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
+import { indexErrorMessage, inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
 import { curValues } from './useGlobal';
 
-const useTest = () => useSharedState("test", "test");
-const useFoo = () => useSharedState("foo", "foo");
-const useCompound = () => useSharedState("compound", {a: 1, b: 2});
+const useTest = useSharedState("test");
+const useFoo = useSharedState("foo");
+const useCompound = useSharedState({a: 1, b: 2});
 
 const DependentStateTest = () => {
-    const [a, setA] = useSharedState<string>("master", "foo");
-    const [b, setB] = useSharedState<string>(a, "unset");
+    const [a, setA] = useFoo();
+    const [b, setB] = useSharedState<string>(a, "unset")();
     const useStateBar = () => {setA("bar");}
     const useStateFoo = () => {setA("foo");}
     const setBVal = (val:string) => () => {setB(val);}
@@ -109,14 +109,14 @@ const Test4 = (props:{onRender:() => void}) => {
 }
 
 const TestCompound1 = () => {
-    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
 
     return <div data-testid="test">{test}</div>
 }
 
 const TestCompound2 = () => {
     const [obj, setObj] = useCompound();
-    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
 
     return <>
         <div data-testid="test-obj">{obj.b}</div>
@@ -125,7 +125,7 @@ const TestCompound2 = () => {
 }
 
 const TestDerivedChild = (props:{onRender:() => void}) => {
-    const test = useDerivedState(["compound"], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
     props.onRender();
     return <>
         <div data-testid="test">{test}</div>
@@ -155,11 +155,11 @@ const TestDerivedParent = (props:{onRenderChild:() => void, onRenderMain:() => v
     </>;
 }
 
-const usePreset1 = () => useLocalStorage.string("preset1", "shouldnt-be-set");
-const usePreset2 = () => useLocalStorage.number("preset2", 0);
-const usePreset3 = () => useLocalStorage.boolean("preset3", false);
-const usePresetJson = () => useLocalStorage.object("presetJson1", {a: 3, b: 4});
-const useNotSet = () => useLocalStorage.string("notSet1", "notSet1");
+let usePreset1 = useLocalStorage.string("shouldnt-be-set");
+let usePreset2 = useLocalStorage.number(0);
+let usePreset3 = useLocalStorage.boolean(false);
+let usePresetJson = useLocalStorage.object("presetJson", {a: 3, b: 4});
+let useNotSet = useLocalStorage.string("notSet1");
 
 const TestLocalStorage = () => {
     const[preset1, setPreset1] = usePreset1();
@@ -222,36 +222,60 @@ const TestInjectStateless = (props:InjectProps) => <>
     <div data-testid="d">{props.d}</div>
 </>;
 
+const TestInvalidHook = () => {
+    const [test, setTest] = useSharedState<string>("oldVal")();
+
+    return <>
+        <div>{test}</div>
+        <button onClick={() => {setTest("newVal")}}>Click!</button>
+    </>;
+}
+
+const TestInvalidLocalStorageHook = () => {
+    const [test, setTest] = useLocalStorage.string("oldVal")();
+
+    return <>
+        <div>{test}</div>
+        <button onClick={() => {setTest("newVal")}}>Click!</button>
+    </>;
+}
+
 const connect = inject<{}, InjectProps>(mergeProps(injectA, injectB, injectCD));
 const TestInjectStateful = connect(TestInjectStateless);
 
 beforeEach(() => {
-    localStorage.clear();
-
-    // Setup initial localStorage values
-    localStorage.setItem("preset1", "foo1");
-    localStorage.setItem("preset2", "1");
-    localStorage.setItem("preset3", "1");
-    localStorage.setItem("presetJson1", JSON.stringify({a: 1, b: 2}));
-
-    // Clear mocks
-    jest.clearAllMocks();
-
     // Reset spying
     useGlobal.listen.clearAll();
 
     // Clear all global values
     useGlobal.clearAll();
+
+    // Reset localStorage listeners
+    localStorage.clear();
+    usePreset1 = useLocalStorage.string("shouldnt-be-set");
+    usePreset2 = useLocalStorage.number(0);
+    usePreset3 = useLocalStorage.boolean(false);
+    usePresetJson = useLocalStorage.object({a: 3, b: 4});
+    useNotSet = useLocalStorage.string("notSet1");
+
+    // Setup initial localStorage values
+    localStorage.setItem(usePreset1.__index__, "foo1");
+    localStorage.setItem(usePreset2.__index__, "1");
+    localStorage.setItem(usePreset3.__index__, "1");
+    localStorage.setItem(usePresetJson.__index__, JSON.stringify({a: 1, b: 2}));
+
+    // Clear mocks
+    jest.clearAllMocks();
 });
 window.localStorage = localStorage;
 
 describe("unstateless", () => {
     describe("test setup", () => {
         it("should setup localstorage", () => {
-            expect(localStorage.getItem("preset1")).toEqual("foo1");
-            expect(localStorage.getItem("preset2")).toEqual("1");
-            expect(localStorage.getItem("preset3")).toEqual("1");
-            expect(localStorage.getItem("presetJson1")).toEqual('{"a":1,"b":2}');
+            expect(localStorage.getItem(usePreset1.__index__)).toEqual("foo1");
+            expect(localStorage.getItem(usePreset2.__index__)).toEqual("1");
+            expect(localStorage.getItem(usePreset3.__index__)).toEqual("1");
+            expect(localStorage.getItem(usePresetJson.__index__)).toEqual('{"a":1,"b":2}');
         });
     });
     describe("useSharedState", () => {
@@ -268,7 +292,7 @@ describe("unstateless", () => {
         });
         it("saves current values upon initial render", () => {
             render(<Test1 />);
-            expect(curValues.test).toEqual("test");
+            expect(curValues[useTest.__index__]).toEqual("test");
         });
         it("should not rerender if a value does not change", () => {
             const onRender = jest.fn();
@@ -326,6 +350,12 @@ describe("unstateless", () => {
             expect(screen.getByTestId("a")).toHaveTextContent("foo");
             expect(screen.getByTestId("b")).toHaveTextContent("clicked");
         });
+        it("should throw an error if index is not defined for locally defined hook", () => {
+            
+            expect(() => {
+                render(<TestInvalidHook />);
+            }).toThrow(indexErrorMessage);
+        });
     });
     describe("useLocalStorage", () => {
         it("should load raw intial values from localstorage if available", () => {
@@ -345,16 +375,16 @@ describe("unstateless", () => {
             render(<TestLocalStorage />);
 
             fireEvent.click(screen.getByTestId("preset1-button"));
-            expect(localStorage.setItem).toHaveBeenCalledWith("preset1", "clicked-preset-1");
+            expect(localStorage.setItem).toHaveBeenCalledWith(usePreset1.__index__, "clicked-preset-1");
 
             fireEvent.click(screen.getByTestId("preset2-button"));
-            expect(localStorage.setItem).toHaveBeenCalledWith("preset2", "2");
+            expect(localStorage.setItem).toHaveBeenCalledWith(usePreset2.__index__, "2");
 
             fireEvent.click(screen.getByTestId("preset3-button"));
-            expect(localStorage.setItem).toHaveBeenCalledWith("preset3", "");
+            expect(localStorage.setItem).toHaveBeenCalledWith(usePreset3.__index__, "");
 
             fireEvent.click(screen.getByTestId("preset3-button2"));
-            expect(localStorage.setItem).toHaveBeenCalledWith("preset3", "1");
+            expect(localStorage.setItem).toHaveBeenCalledWith(usePreset3.__index__, "1");
         });
         it("should rerender all components when updating", () => {
             render(<><TestLocalStorage /><TestLocalStorage2 /></>);
@@ -363,11 +393,17 @@ describe("unstateless", () => {
             expect(screen.getByTestId("preset1-2")).toHaveTextContent("clicked-preset-1");
         });
         it("should use initialValue if localStorage value is invalid", () => {
-            localStorage.setItem("presetJson1", "Dfsddf");
+            localStorage.setItem(usePresetJson.__index__, "Dfsddf");
             render(<TestLocalStorage2 />);
             expect(screen.getByTestId("a")).toHaveTextContent("3");
             expect(screen.getByTestId("b")).toHaveTextContent("4");
-        })
+        });
+        it("should throw an error if index is not defined for locally defined hook", () => {
+            
+            expect(() => {
+                render(<TestInvalidLocalStorageHook />);
+            }).toThrow(indexErrorMessage);
+        });
     });
     describe("useDerivedState", () => {
         it("should use an initial value if the state is not set", () => {
@@ -409,40 +445,67 @@ describe("unstateless", () => {
     describe("listen", () => {
         it("should allow hooking into state change events", () => {
             const test = jest.fn();
-            useGlobal.listen.on("test", test);
+            useGlobal.listen.on(useTest, test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
+            expect(test).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
         });
         it("should run a new listener if the listened value has already been set", () => {
             const test = jest.fn();
             render(<Test1 />);
-            useGlobal.listen.on("test", test);
-            expect(test).toHaveBeenCalledWith("test", "test", "test");
+            useGlobal.listen.on(useTest, test);
+            expect(test).toHaveBeenCalledWith("test", "test", useTest.__index__);
         });
         it("should allow removing listen hooks", () => {
             const test = jest.fn();
-            useGlobal.listen.on("test", test);
+            useGlobal.listen.on(useTest, test);
+
             render(<Test1 />);
             expect(test).toHaveBeenCalledTimes(1);
+
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
-            useGlobal.listen.off("test", test);
+            expect(test).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
+            expect(test).toHaveBeenCalledTimes(2);
+
+            useGlobal.listen.off(useTest, test);
+
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(2);
+        });
+        it("should allow removing all listen hooks", () => {
+            const test1 = jest.fn();
+            useGlobal.listen.on(useTest, test1);
+            const test2 = jest.fn();
+            useGlobal.listen.on(useTest, test2);
+
+            render(<Test1 />);
+            expect(test1).toHaveBeenCalledTimes(1);
+            expect(test2).toHaveBeenCalledTimes(1);
+
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(test1).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
+            expect(test2).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
+            expect(test1).toHaveBeenCalledTimes(2);
+            expect(test2).toHaveBeenCalledTimes(2);
+
+            useGlobal.listen.clear(useTest);
+
+            fireEvent.click(screen.getByTestId("button1-2"));
+            expect(test1).toHaveBeenCalledTimes(2);
+            expect(test2).toHaveBeenCalledTimes(2);
         });
         it("should allow hooking into all state change events", () => {
             const test = jest.fn();
             useGlobal.listen.onAll(test);
             render(<Test1 />);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
+            expect(test).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
         });
         it("should run new global listeners immediately if values have been set", () => {
             const test = jest.fn();
             render(<Test1 />);
             useGlobal.listen.onAll(test);
-            expect(test).toHaveBeenCalledWith("test", "test", "test");
+            expect(test).toHaveBeenCalledWith("test", "test", useTest.__index__);
         });
         it("should allow removing global listen hooks", () => {
             const test = jest.fn();
@@ -450,7 +513,7 @@ describe("unstateless", () => {
             render(<Test1 />);
             expect(test).toHaveBeenCalledTimes(2);
             fireEvent.click(screen.getByTestId("button1"));
-            expect(test).toHaveBeenCalledWith("clicked", "test", "test");
+            expect(test).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
             expect(test).toHaveBeenCalledTimes(3);
             useGlobal.listen.offAll(test);
             fireEvent.click(screen.getByTestId("button1-2"));

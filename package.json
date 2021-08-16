@@ -53,6 +53,8 @@
     "typescript": "^3.5.3"
   },
   "dependencies": {
+    "guid-typescript": "^1.0.9",
+    "stacktrace-js": "^2.0.2",
     "ts-functional": "^1.10.0"
   },
   "peerDependencies": {

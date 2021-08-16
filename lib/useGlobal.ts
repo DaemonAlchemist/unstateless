@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
-import { IUseGlobalOptions, Setter, UpdateSpy } from './types';
+import { ISharedState, IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 // Record all components who are subscribed to specific global states
 const subscribers:{[index:string]: Set<Func<any, void>>} = {};
@@ -94,13 +94,14 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
     }
 
 useGlobalRaw.listen = {
-    on: <T>(index:string, spy:UpdateSpy<T>) => {
-        if(!spies[index]) {
-            spies[index] = new Set<UpdateSpy<T>>();
+    on: <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => {
+        const i = state.__index__;
+        if(!spies[i]) {
+            spies[i] = new Set<UpdateSpy<T>>();
         }
-        spies[index].add(spy);
-        if(typeof curValues[index] !== "undefined") {
-            spy(curValues[index], curValues[index], index);
+        spies[i].add(spy);
+        if(typeof curValues[i] !== "undefined") {
+            spy(curValues[i], curValues[i], i);
         }
     },
     onAll: <T>(spy:UpdateSpy<T>) => {
@@ -109,17 +110,19 @@ useGlobalRaw.listen = {
             spy(curValues[index], curValues[index], index);
         });
     },
-    off: <T>(index:string, spy:UpdateSpy<T>) => {
-        spies[index].delete(spy);
+    off: <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => {
+        spies[state.__index__].delete(spy);
     },
     offAll: <T>(spy:UpdateSpy<T>) => {
         globalSpies.delete(spy);
     },
-    clear: (index:string) => {
-        spies[index].clear();
+    clear: <T>(state:ISharedState<T>) => {
+        spies[state.__index__].clear();
     },
     clearAll: () => {
-        Object.keys(spies).forEach(useGlobalRaw.listen.clear);
+        Object.keys(spies).forEach(index => {
+            spies[index].clear();
+        });
         globalSpies.clear();
     }
 }
