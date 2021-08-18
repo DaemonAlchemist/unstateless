@@ -14,7 +14,6 @@ export declare interface ISharedState<T> {
     __index__: string;
 }
 
-export declare interface ISharedStateFunction {
-    <T>(initialValue:T): ISharedState<T>;
-    <T>(index: string, initialValue:T): ISharedState<T>;
+export declare interface ISharedStateFunction<T> {
+    (initialValue: T | string, i?:T | string): ISharedState<T>;
 }

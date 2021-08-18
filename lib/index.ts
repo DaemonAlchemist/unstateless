@@ -12,7 +12,7 @@ export { useLocalStorage } from "./useLocalStorage";
 
 export const indexErrorMessage = "Unstateless error:  An index is required when using useSharedState directly inside a component.";
 
-export const useSharedState:ISharedStateFunction = <T>(initialValue:T | string, i?:T | string):ISharedState<T> => {
+export const useSharedState = <T>(initialValue:T | string, i?:T | string):ISharedState<T> => {
     const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
     if(isRendering && !i) {
         throw indexErrorMessage;
