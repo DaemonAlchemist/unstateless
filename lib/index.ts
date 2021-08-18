@@ -14,7 +14,7 @@ export const indexErrorMessage = "Unstateless error:  An index is required when 
 
 export const useSharedState = <T>(initialValue:T | string, i?:T | string):ISharedState<T> => {
     const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
-    if(isRendering && !i) {
+    if(isRendering && typeof i === "undefined") {
         throw indexErrorMessage;
     }
 

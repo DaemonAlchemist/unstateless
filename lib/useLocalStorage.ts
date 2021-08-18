@@ -30,7 +30,7 @@ const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:F
     const loadInitialValue = loadLocalStorageValue<T>(options.deserialize, options.serialize);
     return (initialValue:T | string, i?:T | string):ISharedState<T> => {
         const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
-        if(isRendering && !i) {
+        if(isRendering && typeof i === "undefined") {
             throw indexErrorMessage;
         }
 
