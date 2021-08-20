@@ -11,6 +11,9 @@ export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;
 
 export declare interface ISharedState<T> {
     (): [T, Setter<T>];
+    onChange: (spy:UpdateSpy<T>) => void;
+    offChange: (spy:UpdateSpy<T>) => void;
+    clearListeners: () => void;
     __index__: string;
 }
 

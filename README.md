@@ -264,13 +264,14 @@ The base function for both `useSharedState` and `useLocalStorage`.  Use of `useG
 
 ### Event Listeners
 
-`unstateless` also provides the `useGlobal.listen` object for hooking into shared state changes.  Whenever a shared variable is initialized or changes, any attached listeners will also run.
+`unstateless` also provides the `useGlobal.listen` object for hooking into shared state changes.  Whenever a shared variable is initialized or changes, any attached listeners will also run.  For convenience, listeners can also be attached directly to custom hooks
 
 #### `type UpdateSpy<T> = (newVal:T, oldVal:T, index:string) => void`
 
 ---
 
 #### `useGlobal.listen.on:  <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => void`
+#### `useMyVar.onChange(spy:UpdateSpy<T>)`
 
 This provides a hook into the shared state update process.  Pass in a spy function to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
 
@@ -279,6 +280,7 @@ This provides a hook into the shared state update process.  Pass in a spy functi
 Add a listener on all state changes rather than a single state element.
 
 #### `useGlobal.listen.off:  <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => void`
+#### `useMyVar.offChange(spy:UpdateSpy<T>)`
 
 Remove a previously added state update listener.
 
@@ -287,7 +289,7 @@ Remove a previously added state update listener.
 Remove a previously added global state update listener.
 
 #### `useGlobal.listen.clear:  (state:ISharedState<T>) => void`
-
+#### `useMyVar.clearListeners: () => void`
 Remove all listeners for a shared value
 
 #### `useGlobal.listen.clearAll:  () => void`

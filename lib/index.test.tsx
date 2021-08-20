@@ -453,12 +453,12 @@ describe("unstateless", () => {
         it("should run a new listener if the listened value has already been set", () => {
             const test = jest.fn();
             render(<Test1 />);
-            useGlobal.listen.on(useTest, test);
+            useTest.onChange(test);
             expect(test).toHaveBeenCalledWith("test", "test", useTest.__index__);
         });
         it("should allow removing listen hooks", () => {
             const test = jest.fn();
-            useGlobal.listen.on(useTest, test);
+            useTest.onChange(test);
 
             render(<Test1 />);
             expect(test).toHaveBeenCalledTimes(1);
@@ -467,16 +467,16 @@ describe("unstateless", () => {
             expect(test).toHaveBeenCalledWith("clicked", "test", useTest.__index__);
             expect(test).toHaveBeenCalledTimes(2);
 
-            useGlobal.listen.off(useTest, test);
+            useTest.offChange(test);
 
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(2);
         });
         it("should allow removing all listen hooks", () => {
             const test1 = jest.fn();
-            useGlobal.listen.on(useTest, test1);
+            useTest.onChange(test1);
             const test2 = jest.fn();
-            useGlobal.listen.on(useTest, test2);
+            useTest.onChange(test2);
 
             render(<Test1 />);
             expect(test1).toHaveBeenCalledTimes(1);
@@ -488,7 +488,7 @@ describe("unstateless", () => {
             expect(test1).toHaveBeenCalledTimes(2);
             expect(test2).toHaveBeenCalledTimes(2);
 
-            useGlobal.listen.clear(useTest);
+            useTest.clearListeners();
 
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test1).toHaveBeenCalledTimes(2);

@@ -3,6 +3,7 @@ import * as StackTrace from 'stacktrace-js';
 import { Func } from "ts-functional/dist/types";
 import { indexErrorMessage } from '.';
 import { ISharedState, ISharedStateFunction } from './types';
+import { UpdateSpy } from './types.d';
 import { useGlobal } from "./useGlobal";
 
 const loadLocalStorageValue = <T>(deserialize:Func<string, T>, serialize:Func<T, string>) => (index:string, initialValue:T) => {
@@ -36,11 +37,18 @@ const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:F
 
         const initial:T = (!!i ? i : initialValue) as T;
         const index:string = (!!i ? initialValue : Guid.create().toString()) as string;
-        const f = () => useGlobal<T>({loadInitialValue})(index, initial);
-        f.__index__ = index;
-        useGlobal.listen.on(f, save);
+        const f = addSharedState<T>(index, () => useGlobal<T>({loadInitialValue})(index, initial));
+        f.onChange(save);
         return f;
     };
+}
+
+export const addSharedState = <T>(index:string, f:any):ISharedState<T> => {
+    f.__index__ = index;
+    f.onChange = (spy:UpdateSpy<T>) => {useGlobal.listen.on(f, spy);}
+    f.offChange = (spy:UpdateSpy<T>) => {useGlobal.listen.off(f, spy);}
+    f.clearListeners = () => {useGlobal.listen.clear(f);}
+    return f;
 }
 
 useLocalStorageRaw.string  = useLocalStorageRaw<string >({deserialize: (a:string) => a,   serialize:(a:string) => a            });

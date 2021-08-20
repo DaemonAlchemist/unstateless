@@ -1,8 +1,9 @@
 import { Guid } from 'guid-typescript';
 import * as StackTrace from 'stacktrace-js';
 import { pipe } from 'ts-functional';
-import { ISharedState, ISharedStateFunction } from './types.d';
+import { ISharedState } from './types.d';
 import { useGlobal } from "./useGlobal";
+import { addSharedState } from './useLocalStorage';
 
 export { inject } from "./inject";
 export { Injector, IUseGlobalOptions, Setter, UpdateSpy } from "./types.d";
@@ -20,8 +21,7 @@ export const useSharedState = <T>(initialValue:T | string, i?:T | string):IShare
 
     const initial:T = (!!i ? i : initialValue) as T;
     const index:string = (!!i ? initialValue : Guid.create().toString()) as string;
-    const f = () => useGlobal<T>()(index, initial);
-    f.__index__ = index;
+    const f = addSharedState<T>(index, () => useGlobal<T>()(index, initial));
     return f;
 }
 
