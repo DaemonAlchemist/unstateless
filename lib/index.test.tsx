@@ -292,7 +292,7 @@ describe("unstateless", () => {
         });
         it("saves current values upon initial render", () => {
             render(<Test1 />);
-            expect(curValues[useTest.__index__]).toEqual("test");
+            expect(useTest.getValue()).toEqual("test");
         });
         it("should not rerender if a value does not change", () => {
             const onRender = jest.fn();

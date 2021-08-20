@@ -300,6 +300,10 @@ Remove all listeners for all shared values
 
 ### Misc Functions
 
+#### `useMyVar.getValue: <T>() => T`
+
+Get the current value of the shared state.  This is useful in case the shared state is needed outside the context of a React component where hooks cannot be used, such as passing a login token to an API.
+
 #### `useGlobal.clear(index:string)`
 #### `useGlobal.clearAll()`
 

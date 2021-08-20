@@ -2,8 +2,7 @@ import { Guid } from 'guid-typescript';
 import * as StackTrace from 'stacktrace-js';
 import { pipe } from 'ts-functional';
 import { ISharedState } from './types.d';
-import { useGlobal } from "./useGlobal";
-import { addSharedState } from './useLocalStorage';
+import { addSharedState, useGlobal } from "./useGlobal";
 
 export { inject } from "./inject";
 export { Injector, IUseGlobalOptions, Setter, UpdateSpy } from "./types.d";

@@ -135,4 +135,14 @@ useGlobalRaw.clearAll = () => {
     Object.keys(curValues).forEach(useGlobalRaw.clear);
 }
 
+
+export const addSharedState = <T>(index:string, f:any):ISharedState<T> => {
+    f.__index__ = index;
+    f.onChange = (spy:UpdateSpy<T>) => {useGlobal.listen.on(f, spy);}
+    f.offChange = (spy:UpdateSpy<T>) => {useGlobal.listen.off(f, spy);}
+    f.clearListeners = () => {useGlobal.listen.clear(f);}
+    f.getValue = () => curValues[index];
+    return f;
+}
+
 export const useGlobal = useGlobalRaw;
