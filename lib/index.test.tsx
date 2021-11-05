@@ -231,6 +231,19 @@ const TestInvalidHook = () => {
     </>;
 }
 
+const TestFalseValue = () => {
+    const useBool = useSharedState<boolean>("bool-val", false);
+    const [test, setTest] = useBool();
+
+    return <>
+        <div data-testid="test1">
+            {test ? "True" : "False"}
+        </div>
+        <div data-testid="test-index">{useBool.__index__}</div>
+        <button onClick={() => {setTest(true)}}>Click!</button>
+    </>;
+}
+
 const TestInvalidLocalStorageHook = () => {
     const [test, setTest] = useLocalStorage.string("oldVal")();
 
@@ -355,6 +368,11 @@ describe("unstateless", () => {
             expect(() => {
                 render(<TestInvalidHook />);
             }).toThrow(indexErrorMessage);
+        });
+        it("should set the index properly for falsy initial values", () => {
+            render(<TestFalseValue />);
+            expect(screen.getByTestId("test-index")).toHaveTextContent("bool-val");
+            expect(screen.getByTestId("test1")).toHaveTextContent("False");
         });
     });
     describe("useLocalStorage", () => {

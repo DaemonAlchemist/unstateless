@@ -1,4 +1,6 @@
+import { Guid } from 'guid-typescript';
 import * as React from 'react';
+import * as StackTrace from 'stacktrace-js';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
 import { ISharedState, IUseGlobalOptions, Setter, UpdateSpy } from './types';
@@ -144,5 +146,20 @@ export const addSharedState = <T>(index:string, f:any):ISharedState<T> => {
     f.getValue = () => curValues[index];
     return f;
 }
+
+export const indexErrorMessage = "Unstateless error:  An index is required when using useSharedState directly inside a component.";
+export const initSharedState = <T>(initialValue:T | string, i?:T | string):{initial:T, index:string} => {
+    // If a custom hook is being defined inline within a component, it MUST have an index.
+    // Throw an error otherwise.
+    const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
+    if(isRendering && typeof i === "undefined") {
+        throw indexErrorMessage;
+    }
+
+    const definedIndex = typeof i !== 'undefined';
+    const initial:T    = (definedIndex ? i : initialValue) as T;
+    const index:string = (definedIndex ? initialValue : Guid.create().toString()) as string;
+    return {initial, index};
+} 
 
 export const useGlobal = useGlobalRaw;
