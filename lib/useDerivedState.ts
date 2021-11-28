@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ISharedState } from './types';
 import { curValues, useGlobal } from './useGlobal';
 
-export const useDerivedState = <T>(states:ISharedState<any>[], extractor:((...args:any[]) => T)):T => {
+export const useDerivedState = <T>(extractor:((...args:any[]) => T), states:ISharedState<any>[]):T => {
     const [derivedValue, setDerivedValue] = React.useState<T>(extractor());
 
     const listener = React.useCallback((newVal:any, oldVal:any, index:any) => {

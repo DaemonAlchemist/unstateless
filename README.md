@@ -206,7 +206,7 @@ However, you can also use `useLocalStorage` directly if you need custom serializ
 
 ---
 
-### `useDerivedState: <T>(states:ISharedState<any>[], extractor:((...args:any[]) => T)) => T`
+### `useDerivedState: <T>(extractor:((...args:any[]) => T), states:ISharedState<any>[]) => T`
 
 The `useDerivedState` hook allows components to derive new state data from one or more shared state values.  The main purpose of this hook is to prevent unnecessary rerenders;  Even if the source state variables change, components that use the `useDerivedState` hook will not re-render unless the derived data also changes.
 

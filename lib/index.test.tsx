@@ -109,14 +109,14 @@ const Test4 = (props:{onRender:() => void}) => {
 }
 
 const TestCompound1 = () => {
-    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState(obj => !!obj ? obj.a : 0, [useCompound]);
 
     return <div data-testid="test">{test}</div>
 }
 
 const TestCompound2 = () => {
     const [obj, setObj] = useCompound();
-    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState(obj => !!obj ? obj.a : 0, [useCompound]);
 
     return <>
         <div data-testid="test-obj">{obj.b}</div>
@@ -125,7 +125,7 @@ const TestCompound2 = () => {
 }
 
 const TestDerivedChild = (props:{onRender:() => void}) => {
-    const test = useDerivedState([useCompound], obj => !!obj ? obj.a : 0);
+    const test = useDerivedState(obj => !!obj ? obj.a : 0, [useCompound]);
     props.onRender();
     return <>
         <div data-testid="test">{test}</div>
