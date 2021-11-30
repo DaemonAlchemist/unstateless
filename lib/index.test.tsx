@@ -253,6 +253,17 @@ const TestInvalidLocalStorageHook = () => {
     </>;
 }
 
+const a = {b: 1, c:undefined}
+a.c = {a};
+const TestCircularObject = () => {
+    const [test, setTest] = useSharedState<any>('test', a)();
+
+    return <>
+        <div data-testid="test">{test.b}</div>
+        <button data-testid="btn" onClick={() => {setTest(t => ({...t, b:2}))}}>Click!</button>
+    </>;
+}
+
 const connect = inject<{}, InjectProps>(mergeProps(injectA, injectB, injectCD));
 const TestInjectStateful = connect(TestInjectStateless);
 
@@ -374,6 +385,12 @@ describe("unstateless", () => {
             expect(screen.getByTestId("test-index")).toHaveTextContent("bool-val");
             expect(screen.getByTestId("test1")).toHaveTextContent("False");
         });
+        it("should work with circular objects", () => {
+            render(<TestCircularObject />);
+            expect(screen.getByTestId("test")).toHaveTextContent("1");
+            fireEvent.click(screen.getByTestId("btn"));
+            expect(screen.getByTestId("test")).toHaveTextContent("2");
+        })
     });
     describe("useLocalStorage", () => {
         it("should load raw intial values from localstorage if available", () => {
