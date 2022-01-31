@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
 import { indexErrorMessage, inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
+import { createInjector } from './inject';
 import { curValues } from './useGlobal';
 
 const useTest = useSharedState("test");
@@ -205,9 +206,9 @@ const TestLocalStorage2 = () => {
     </>;
 }
 
-const injectA = (props:any) => ({...props, a: "A"});
-const injectB = (props:any) => ({...props, b: "B"});
-const injectCD = (props:any) => ({...props, c: "C", d: "D"});
+const injectA = createInjector(() => ({a: "A"}));
+const injectB = createInjector(() => ({b: "B"}));
+const injectCD = createInjector(() => ({c: "C", d: "D"}));
 
 interface InjectProps {
     a: string;

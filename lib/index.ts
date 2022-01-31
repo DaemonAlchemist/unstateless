@@ -2,7 +2,7 @@ import { pipe } from 'ts-functional';
 import { ISharedState } from './types.d';
 import { addSharedState, initSharedState, useGlobal } from "./useGlobal";
 
-export { inject } from "./inject";
+export { createInjector, inject } from "./inject";
 export { Injector, IUseGlobalOptions, Setter, UpdateSpy } from "./types.d";
 export { useDerivedState } from './useDerivedState';
 export { useGlobal } from './useGlobal';

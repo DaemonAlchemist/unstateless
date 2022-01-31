@@ -36,7 +36,7 @@ export const SomeComponent = (props:any) => {
 
 /libs/hooks.ts
 ```typescript
-import { Setter, useLocalStorage, useSharedState } from "unstateless";
+import { Setter, useLocalStorage, useSharedState, createInjector } from "unstateless";
 
 // Store the user's current workspace
 
@@ -47,10 +47,10 @@ export interface IWorkspace {
 
 export const useWorkspace = useSharedState<string>("");
 
-export const injectWorkspace = <T>(props:T):T & IWorkspace => {
+export const injectWorkspace = createInjector(():IWorkspace => {
     const [workspace, setWorkspace] = useWorkspace();
-    return {...props, workspace, setWorkspace};
-}
+    return {workspace, setWorkspace};
+});
 
 // Store the user's current screen for each of their workspaces
 // This uses useLocalStorage, so will be persisted between sessions.
@@ -62,10 +62,10 @@ export interface ICurrentScreen {
 
 export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "")();
 
-export const injectCurrentScreen = <T extends IWorkspace>(props:T):T & ICurrentScreen => {
+export const injectCurrentScreen = createInjector((props:IWorkspace):ICurrentScreen => {
     const [screen, setScreen] = useCurrentScreen<string>(props.workspace);
-    return {...props, screen, setScreen};
-}
+    return {screen, setScreen};
+});
 ```
 
 /components/App/App.tsx
@@ -235,9 +235,24 @@ The values of those state variables will be passed as arguments in that order to
 
 ### `inject: <A extends {}, B extends {}>(injector:Injector<A, B>) => (Component:React.ComponentType<B>) => (props:A) => JSX.Element`
 
+### `createInjector: <OutputProps, InputProps = any>(f:Func<InputProps, OutputProps>) => <T extends InputProps>(props:T):T & OutputProps`
+
 The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  It works in a similar manner to react-redux's `connect` function.
 
 Injectors should have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, injectors should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
+
+You can also create injectors from normal functions with the `createInjector` function.  For example, the following two function definitions are identical:
+
+```typescript
+// Calculate A from B
+const getA = (props:B) => ({a: getAFromB(props.b)});
+
+// Manually include existing props
+const injectAFromB = <T extends B>(props:T):T & A => ({...props, ...getA(props)});
+
+// Just add what you need and let createInjector worry about the existing props
+const injectAFromB = createInjector(getA);
+```
 
 ---
 
