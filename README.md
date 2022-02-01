@@ -3,7 +3,7 @@
 `unstateless` is a shared state management library for React.  It's main design goals are:
 
 - `Zero boilerplate`: Creating and using a shared state variable shouldn't require any code other than the definition of the variable.
-- `Natural`: Shared state should be just as easy to use as local state and shouldn't require learning any additional concepts.
+- `Familiar`: Shared state should be just as easy to use as local state and shouldn't require learning any additional concepts.
 
 ## Basic usage example
 
@@ -18,7 +18,7 @@ export const SomeComponent = (props:any) => {
     
     return <>
         {userName}
-        <p>These buttons are equivalent.</p>
+        <p>These two buttons are equivalent.</p>
         <button onClick={() => {setUserName("A New Name")}>Click!</button>
         <button onClick={    updateUserName("A New Name")}>Click!</button>
     </>;
@@ -40,32 +40,39 @@ export const SomeComponent = (props:any) => {
 ```typescript
 import { Setter, useLocalStorage, useSharedState, createInjector } from "unstateless";
 
-// Store the user's current workspace
+//--Store the user's current workspace.--//
 
+// Define the workspace props
 export interface IWorkspace {
     workspace: string;
     setWorkspace: Setter<string>;
     updateWorkspace: (newWorkspace:string) => () => void;
 }
 
+// Create the workspace shared state hook
 export const useWorkspace = useSharedState<string>("");
 
+// Create an injector to inject the workspace props into components
 export const injectWorkspace = createInjector(():IWorkspace => {
     const [workspace, setWorkspace, updateWorkspace] = useWorkspace();
     return {workspace, setWorkspace, updateWorkspace};
 });
 
-// Store the user's current screen for each of their workspaces
-// This uses useLocalStorage, so will be persisted between sessions.
+//----Store the user's current screen for each of their workspaces.----//
+//--This uses useLocalStorage, so will be persisted between sessions.--//
 
+// Define the current screen props
 export interface ICurrentScreen {
     screen: string;
     setScreen: Setter<string>;
     updateScreen: (newScreen:string) => () => void;
 }
 
+// Create the current screen persistent shared state hook
 export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "")();
 
+// Create an injector to inject the current screen props into components
+// Note that the current screen is saved for each workspace.
 export const injectCurrentScreen = createInjector((props:IWorkspace):ICurrentScreen => {
     const [screen, setScreen, updateScreen] = useCurrentScreen<string>(props.workspace);
     return {screen, setScreen, updateScreen};
@@ -81,10 +88,13 @@ import { AppProps} from "./App.d";
 import { WorkspaceSelector } from "../WorkspaceSelector";
 import { ScreenSelector } from "../ScreenSelector";
 
-// Inject properties into the component
+// Inject the workspace and current screen properties into the component
 type Props = AppProps & IWorkspace & ICurrentScreen;
 const connect = inject(mergeProps(injectWorkspace, injectCurrentScreen));
 
+// The App component:  Changing the workspace or current screen in their
+// respective selectors will cause the App to rerender with the new 
+// values automatically.
 export const App = connect((props:Props) =>
     <div>
         <h1>{props.workspace} - {props.screen}</h1>
@@ -103,14 +113,14 @@ import { IWorkspace, injectWorkspace} from "../../libs/hooks";
 import { inject, mergeProps } from "unstateless";
 import { WorkspaceSelectorProps} from "./WorkspaceSelector.d";
 
-// Inject properties into the component
+// Inject the workspace properties into the component
 type Props = WorkspaceSelectorProps & IWorkspace;
 const connect = inject(mergeProps(injectWorkspace));
 
+// Hardcode some sample workspaces
 const workspaces:string[] = ["Personal", "Work", "School"];
 
-// The WorkplaceSelector component:  Note that since setWorkplace
-// comes from a shared state hook, changing the workspace here will
+// The WorkplaceSelector component:  Changing the workspace here will
 // cause the App component to rerender with the new value automatically
 export const WorkspaceSelector = connect((props:Props) =>
     <>
@@ -129,18 +139,18 @@ import { IWorkspace, ICurrentScreen, injectCurrentScreen, injectWorkspace} from 
 import { inject, mergeProps } from "unstateless";
 import { ScreenSelectorProps} from "./ScreeneSelector.d";
 
-// Inject properties into the component
+// Inject the current screen properties into the component
 type Props = ScreenSelectorProps & IWorkspace & ICurrentScreen;
 const connect = inject(mergeProps(injectWorkspace, injectCurrentScreen));
 
+// Hardcode some sample workspace screens
 const screens = {
     Personal: ["Hobbies", "Chores", "Home Improvements"],
     Work: ["Projects", "Current Tasks", "Notes"],
     School: ["Classes", "Assignments", "Schedule"],
 };
 
-// The ScreenSelector component:  Note that since setScreen
-// comes from a shared state hook, changing the screen here will
+// The ScreenSelector component:  Changing the screen here will
 // cause the App component to rerender with the new value automatically
 export const ScreenSelector = connect((props:Props) =>
     <>
@@ -161,6 +171,7 @@ The `useSharedState` hook is the simplest way to share state between components.
 ```typescript
 export const MyComponent = (...) => {
     const [myVar, setMyVar, updateMyVar] = useSharedState("myVar", defaultValue)();
+
     ...
 }
 ```
@@ -176,6 +187,7 @@ import {useMyVar} from ".../util.ts";
 
 export const MyComponent = (...) => {
     const [myVar, setMyVar, updateMyVar] = useMyVar();
+
     ...
 }
 
@@ -222,8 +234,8 @@ const useBar = useSharedState<string>("another value");
 
 const MyComponent = () => {
     const combined = useDerivedState(
-        [useFoo, useBar],
-        (foo:string, bar:string) => `${foo} - ${bar}`
+        (foo:string, bar:string) => `${foo} - ${bar}`,
+        [useFoo, useBar]
     );
 
     return <div>{combined}</div>;
@@ -231,7 +243,7 @@ const MyComponent = () => {
 
 ```
 
-The values of those state variables will be passed as arguments in that order to the `extractor` function.
+The values of those state variables will be passed as arguments in the same order to the `extractor` function.
 
 `Note`: The extractor function may run before the shared state variables have been initialized, so it also needs to return a sane value if any or all of the source variables are undefined.
 
@@ -241,7 +253,7 @@ The values of those state variables will be passed as arguments in that order to
 
 ### `createInjector: <OutputProps, InputProps = any>(f:Func<InputProps, OutputProps>) => <T extends InputProps>(props:T):T & OutputProps`
 
-The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  It works in a similar manner to react-redux's `connect` function.
+The `inject` function creates a connector function given an injector function.  The connector function will create a higher-order component that will inject the props into a given component.  The connector function works in a similar manner to react-redux's `connect` function.
 
 Injectors should have the signature `(props:ExistingProps) => ExistingProps & NewProps`.  In other words, injectors should include the existing props in the return object along with any new props it defines.  Note that injectors can also depend on properties from other injectors as long as the required properties are injected first (ie. the injector for the required props is to the left of the injector that requires them.  See the `injectCurrentScreen` example above).
 
@@ -254,7 +266,7 @@ const getA = (props:B) => ({a: getAFromB(props.b)});
 // Manually include existing props
 const injectAFromB = <T extends B>(props:T):T & A => ({...props, ...getA(props)});
 
-// Just add what you need and let createInjector worry about the existing props
+// Just add what you need and let createInjector worry about merging in the existing props
 const injectAFromB = createInjector(getA);
 ```
 
@@ -292,7 +304,7 @@ The base function for both `useSharedState` and `useLocalStorage`.  Use of `useG
 #### `useGlobal.listen.on:  <T>(state:ISharedState<T>, spy:UpdateSpy<T>) => void`
 #### `useMyVar.onChange(spy:UpdateSpy<T>)`
 
-This provides a hook into the shared state update process.  Pass in a spy function to listen for state changes.  This is especially useful for logging state changes or persisting values to an API.
+This provides a hook into the shared state update process.  Pass in a spy function to listen for state changes.  This is especially useful for logging state changes or persisting values to remote storage when they change.
 
 #### `useGlobal.listen.onAll:  <T>(spy:UpdateSpy<T>) => void`
 
@@ -315,13 +327,15 @@ Remove all listeners for a shared value
 
 Remove all listeners for all shared values
 
+`Note:`  Under the hood, the `useLocalStorage` shared state hooks use listeners to persist shared values to localStorage.  Removing all listeners from a shared localStorage state hook will prevent further changes to that state from being persisted.
+
 ---
 
 ### Misc Functions
 
 #### `useMyVar.getValue: <T>() => T`
 
-Get the current value of the shared state.  This is useful in case the shared state is needed outside the context of a React component where hooks cannot be used, such as passing a login token to an API.
+Get the current value of the shared state.  This is useful when a shared state value is needed outside the context of a React component where hooks cannot be used, such as passing a login token to an API.
 
 #### `useGlobal.clear(index:string)`
 #### `useGlobal.clearAll()`
@@ -330,7 +344,7 @@ Clear specified value or all values from the global state.  Note that calling th
 
 ## Injectors
 
-Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only requirement for an injector is that it needs to return the props passed to it in its return object.
+Injector functions are not limited to using `unstateless`'s shared state hooks.  They can contain any kind of React hook, including the standard `useState` and `useEffect` hooks.  The only requirement for an injector is that it needs to either merge the input props into its return props, or be wrapped in the `createInjector` function.
 
 ## Recipes
 
