@@ -10,7 +10,7 @@ export declare type UpdateSpy<T> = (newVal:T, oldVal:T, index:string) => void;
 export declare type Injector<A extends {}, B extends {}> = Func<A, A & B>;
 
 export declare interface ISharedState<T> {
-    (): [T, Setter<T>];
+    (): [T, Setter<T>, (newVal:T) => () => void];
     onChange: (spy:UpdateSpy<T>) => void;
     offChange: (spy:UpdateSpy<T>) => void;
     clearListeners: () => void;

@@ -2,9 +2,9 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
-import { indexErrorMessage, inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
+import { inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
 import { createInjector } from './inject';
-import { curValues } from './useGlobal';
+import { indexErrorMessage } from './useGlobal';
 
 const useTest = useSharedState("test");
 const useFoo = useSharedState("foo");
@@ -71,6 +71,21 @@ const Test1 = () => {
         <button data-testid="foo-button1" onClick={updateFoo} >Click</button>
     </>;
 }
+
+const Test1Update = () => {
+    const [test, ,updateTest] = useTest();
+    const [foo, ,updateFoo] = useFoo();
+
+    return <>
+        <div data-testid="test1">{test}</div>
+        <button data-testid="button1" onClick={updateTest("clicked")} >Click</button>
+        <button data-testid="button1-2" onClick={updateTest("clicked2")} >Click</button>
+        <div data-testid="foo1">{foo}</div>
+        <button data-testid="foo-button1" onClick={updateFoo("clicked-foo")} >Click</button>
+    </>;
+}
+
+
 const Test2 = () => {
     const [test, setTest] = useTest();
     const [foo, setFoo] = useFoo();
@@ -306,6 +321,17 @@ describe("unstateless", () => {
     describe("useSharedState", () => {
         it("works within a single component", () => {
             render(<Test1 />);
+            expect(screen.getByTestId("test1")).toHaveTextContent("test");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            fireEvent.click(screen.getByTestId("button1"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
+            fireEvent.click(screen.getByTestId("foo-button1"));
+            expect(screen.getByTestId("test1")).toHaveTextContent("clicked");
+            expect(screen.getByTestId("foo1")).toHaveTextContent("clicked-foo");
+        });
+        it("works with the update function", () => {
+            render(<Test1Update />);
             expect(screen.getByTestId("test1")).toHaveTextContent("test");
             expect(screen.getByTestId("foo1")).toHaveTextContent("foo");
             fireEvent.click(screen.getByTestId("button1"));

@@ -66,7 +66,7 @@ const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dis
 }
 
 const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
-    (index: string, initialValue:T):[T, Setter<T>] => {
+    (index: string, initialValue:T):[T, Setter<T>, (newVal:T) => () => void] => {
         const get = () => {
             const initial = !!options && !!options.loadInitialValue
                 ? (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
@@ -83,6 +83,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index);
+        const update = (newVal:T) => () => {set(newVal);}
 
         // If the index of this hook changes, we need to manually update the current state based on the last saved value
         React.useEffect(() => {
@@ -92,7 +93,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
             }
         }, [index]);
 
-        return [val, set];
+        return [val, set, update];
     }
 
 useGlobalRaw.listen = {

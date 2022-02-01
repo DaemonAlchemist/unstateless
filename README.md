@@ -14,11 +14,13 @@ import {useSharedState} from "unstateless";
 const useUsername = useSharedState<string>("Original Name");
 
 export const SomeComponent = (props:any) => {
-    const [userName, setUserName] = useUsername();
+    const [userName, setUserName, updateUserName] = useUsername();
     
     return <>
         {userName}
+        <p>These buttons are equivalent.</p>
         <button onClick={() => {setUserName("A New Name")}>Click!</button>
+        <button onClick={    updateUserName("A New Name")}>Click!</button>
     </>;
 }
 ```
@@ -43,13 +45,14 @@ import { Setter, useLocalStorage, useSharedState, createInjector } from "unstate
 export interface IWorkspace {
     workspace: string;
     setWorkspace: Setter<string>;
+    updateWorkspace: (newWorkspace:string) => () => void;
 }
 
 export const useWorkspace = useSharedState<string>("");
 
 export const injectWorkspace = createInjector(():IWorkspace => {
-    const [workspace, setWorkspace] = useWorkspace();
-    return {workspace, setWorkspace};
+    const [workspace, setWorkspace, updateWorkspace] = useWorkspace();
+    return {workspace, setWorkspace, updateWorkspace};
 });
 
 // Store the user's current screen for each of their workspaces
@@ -58,13 +61,14 @@ export const injectWorkspace = createInjector(():IWorkspace => {
 export interface ICurrentScreen {
     screen: string;
     setScreen: Setter<string>;
+    updateScreen: (newScreen:string) => () => void;
 }
 
 export const useCurrentScreen = (workspace:string) => useLocalStorage.string(`screen-${workspace}`, "")();
 
 export const injectCurrentScreen = createInjector((props:IWorkspace):ICurrentScreen => {
-    const [screen, setScreen] = useCurrentScreen<string>(props.workspace);
-    return {screen, setScreen};
+    const [screen, setScreen, updateScreen] = useCurrentScreen<string>(props.workspace);
+    return {screen, setScreen, updateScreen};
 });
 ```
 
@@ -111,7 +115,7 @@ const workspaces:string[] = ["Personal", "Work", "School"];
 export const WorkspaceSelector = connect((props:Props) =>
     <>
         {workspaces.map((w:string) =>
-            <button key={w} onClick={() => {props.setWorkspace(w);}}>
+            <button key={w} onClick={props.updateWorkspace(w)}>
                 {w}
             </button>
         )}
@@ -141,7 +145,7 @@ const screens = {
 export const ScreenSelector = connect((props:Props) =>
     <>
         {screens[props.workspace].map((s:string) =>
-            <button key={s} onClick={() => {props.setScreen(s);}}>
+            <button key={s} onClick={props.updateScreen(s)}>
                 {s}
             </button>
         )}
@@ -150,13 +154,13 @@ export const ScreenSelector = connect((props:Props) =>
 ```
 ## Public API
 
-### `useSharedState: <T>(initialValue:T) => () => [T, Setter<T>]`
-### `useSharedState: <T>(stateId: string, initialValue:T) => () => [T, Setter<T>]`
+### `useSharedState: <T>(initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
+### `useSharedState: <T>(stateId: string, initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
 The `useSharedState` hook is the simplest way to share state between components.  You can use it directly inside a component,
 
 ```typescript
 export const MyComponent = (...) => {
-    const [myVar, setMyVar] = useSharedState("myVar", defaultValue)();
+    const [myVar, setMyVar, updateMyVar] = useSharedState("myVar", defaultValue)();
     ...
 }
 ```
@@ -171,7 +175,7 @@ export const useMyVar = useSharedState(defaultValue);
 import {useMyVar} from ".../util.ts";
 
 export const MyComponent = (...) => {
-    const [myVar, setMyVar] = useMyVar();
+    const [myVar, setMyVar, updateMyVar] = useMyVar();
     ...
 }
 
@@ -179,28 +183,28 @@ export const MyComponent = (...) => {
 
 When the shared state is updated by any component, all components hooked up to that state will re-render.
 
-The `useSharedState` function returns a hook that is similar to React's `useState` hook and returns the same tuple (`[value, setValue]`).
+The `useSharedState` function returns a hook that is similar to React's `useState` hook and returns a similar tuple (`[value, setValue, updateValue]`).  The `updateValue` element is a convenience method for the common use case of creating an update handler for a specific value.
 
 ---
 
-### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (initialValue:T) => () => [T, Setter<T>]`
-### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => () => [T, Setter<T>]`
+### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
+### `useLocalStorage: <T>(options:{deserialize:Func<string, T>, serialize:Func<T, string>}) => (stateId: string, initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
 The `useLocalStorage` hook works just like the `useSharedState` hook except that the latest state is persisted in localStorage.  When the app is re-loaded, the `useLocalStorage` hook will first check localStorage for an existing value.  If no value is found in localStorage, the `initialValue` provided will be used to initialize the state.
 
 If you use the `useLocalStorage` function directly, you need to provide a `serialize` function to convert your value into a string, and a `deserialize` function to convert a string back into your value.  Convenience methods are provided for all basic types:
 
-#### `useLocalStorage.string: (initialValue:string) => () => [string, Setter<string>]`
-#### `useLocalStorage.string: (stateId: string, initialValue:string) => () => [string, Setter<string>]`
+#### `useLocalStorage.string: (initialValue:string) => () => [string, Setter<string>, (newVal:string) => () => void]`
+#### `useLocalStorage.string: (stateId: string, initialValue:string) => () => [string, Setter<string>, (newVal:string) => () => void]`
 
 ---
-#### `useLocalStorage.number: (initialValue:number) => () => [number, Setter<number>]`
-#### `useLocalStorage.number: (stateId: string, initialValue:number) => () => [number, Setter<number>]`
+#### `useLocalStorage.number: (initialValue:number) => () => [number, Setter<number>, (newVal:number) => () => void]`
+#### `useLocalStorage.number: (stateId: string, initialValue:number) => () => [number, Setter<number>, (newVal:number) => () => void]`
 ---
-#### `useLocalStorage.boolean: (initialValue:boolean) => () => [boolean, Setter<boolean>]`
-#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean) => () => [boolean, Setter<boolean>]`
+#### `useLocalStorage.boolean: (initialValue:boolean) => () => [boolean, Setter<boolean>, (newVal:boolean) => () => void]`
+#### `useLocalStorage.boolean: (stateId: string, initialValue:boolean) => () => [boolean, Setter<boolean>, (newVal:boolean) => () => void]`
 ---
-#### `useLocalStorage.object: <T extends {}>(initialValue:T) => () => [T, Setter<T>]`
-#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => () => [T, Setter<T>]`
+#### `useLocalStorage.object: <T extends {}>(initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
+#### `useLocalStorage.object: <T extends {}>(stateId: string, initialValue:T) => () => [T, Setter<T>, (newVal:T) => () => void]`
 
 However, you can also use `useLocalStorage` directly if you need custom serialize/deserialize functions.
 
@@ -269,7 +273,7 @@ export const StatefulComponent = connect(StatelessComponent);
 
 ---
 
-### `useGlobal: <T>(options?:IUseGlobalOptions<T>) => (index: string, initialValue:T) => [T, Setter<T>]`
+### `useGlobal: <T>(options?:IUseGlobalOptions<T>) => (index: string, initialValue:T) => [T, Setter<T>, (newVal:T) => () => void]`
 
 The base function for both `useSharedState` and `useLocalStorage`.  Use of `useGlobal` directly allows for customized behavior.  There is one optional parameter:
 
