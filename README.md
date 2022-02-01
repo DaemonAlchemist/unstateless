@@ -32,7 +32,7 @@ export const SomeComponent = (props:any) => {
 - `Composable`: Unstateless can be used to create reusable state and effects that can be injected into any component.
 - `Extensible`: The `useGlobal` core object can be extended to create custom shared state handlers, and listeners can be used to act on any or all state changes.
 - `Hook-based`: Unstateless exposes several custom React hooks for managing shared state.
-- `Compatibile`: Unstateless can be used along side other state management libraries such as Redux.
+- `Compatible`: Unstateless can be used along side other state management libraries such as Redux.
 
 ## Detailed usage example
 
