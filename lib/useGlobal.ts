@@ -28,7 +28,7 @@ const setCurValue = (index:string, obj:any) => {
     curValues[index] = obj;
 }
 
-const updateSubscribers = <T>(index: string) => (newValOrSetter:T | Func<T, T>) => {
+const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func<T, T>) => {
     // Convert the new value into a setter function if it's a raw value
     const updateVal:Func<T, T> = typeof newValOrSetter === 'function'
         ? newValOrSetter as Func<T, T>
@@ -52,7 +52,7 @@ const updateSubscribers = <T>(index: string) => (newValOrSetter:T | Func<T, T>) 
 
     // Update the subscribers if there are any
     getSubscribers(index).forEach((setter) => {setter(newSetter);});
-}
+}, {});
 
 const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
     React.useEffect(() => {
@@ -83,7 +83,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index);
-        const update = (newVal:T) => () => {set(newVal);}
+        const update = memoize(s => (newVal:T) => () => {s(newVal);}, {})(set);
 
         // If the index of this hook changes, we need to manually update the current state based on the last saved value
         React.useEffect(() => {
