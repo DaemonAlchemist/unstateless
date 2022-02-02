@@ -83,7 +83,7 @@ const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
         manageSubscribers<T>(index, get, setVal);
 
         const set = updateSubscribers<T>(index);
-        const update = memoize(s => (newVal:T) => () => {s(newVal);}, {})(set);
+        const update = memoize(s => memoize((newVal:T) => () => {s(newVal);}, {}), {})(set);
 
         // If the index of this hook changes, we need to manually update the current state based on the last saved value
         React.useEffect(() => {
