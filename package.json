@@ -55,7 +55,7 @@
   "dependencies": {
     "guid-typescript": "^1.0.9",
     "stacktrace-js": "^2.0.2",
-    "ts-functional": "^1.14.1"
+    "ts-functional": "^1.17.1"
   },
   "peerDependencies": {
     "react": ">=16.8.0"
