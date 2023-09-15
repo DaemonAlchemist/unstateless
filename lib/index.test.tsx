@@ -4,7 +4,7 @@
 
 // Imports go here
 import '@testing-library/jest-dom/extend-expect';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import * as React from 'react';
 import { inject, mergeProps, useDerivedState, useGlobal, useLocalStorage, useSharedState } from '.';
 import { createInjector } from './inject';
@@ -174,6 +174,14 @@ const TestDerivedParent = (props:{onRenderChild:() => void, onRenderMain:() => v
         <TestDerivedChild2 onRender={props.onRenderMain} />
     </>;
 }
+
+const useSetValue = useSharedState("testSetVal", "test");
+const update = () => {useSetValue.setValue("test2");}
+const TestSetValue = () => {
+    const [value] = useSetValue();
+
+    return <div data-testid="test">{value}</div>;
+};
 
 let usePreset1 = useLocalStorage.string("shouldnt-be-set");
 let usePreset2 = useLocalStorage.number(0);
@@ -421,7 +429,16 @@ describe("unstateless", () => {
             expect(screen.getByTestId("test")).toHaveTextContent("1");
             fireEvent.click(screen.getByTestId("btn"));
             expect(screen.getByTestId("test")).toHaveTextContent("2");
-        })
+        });
+        it("should rerender when using setValue", () => {
+            render(<TestSetValue />);
+            expect(screen.getByTestId("test")).toHaveTextContent("test");
+            console.log("Run update");
+            act(() => {
+                update();
+            });
+            expect(screen.getByTestId("test")).toHaveTextContent("test2");
+        });
     });
     describe("useLocalStorage", () => {
         it("should load raw intial values from localstorage if available", () => {

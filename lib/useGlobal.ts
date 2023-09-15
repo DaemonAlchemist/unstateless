@@ -40,7 +40,11 @@ const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func
     const newSetter = memoize((old:T) => {
         // Update and save the value
         const newVal = updateVal(old);
-
+        if(index === "testSetVal") {
+            console.log("Update");
+            console.log(newVal);
+        }
+    
         if(newVal !== old) {
             setCurValue(index, newVal);
             callListeners(newVal, old, index);
@@ -49,7 +53,7 @@ const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func
         // Return the new value
         return newVal;
     }, {});
-
+console.log(getSubscribers(index).values.length);
     // Update the subscribers if there are any
     getSubscribers(index).forEach((setter) => {setter(newSetter);});
 }, {});
@@ -145,6 +149,7 @@ export const addSharedState = <T>(index:string, f:any):ISharedState<T> => {
     f.offChange = (spy:UpdateSpy<T>) => {useGlobal.listen.off(f, spy);}
     f.clearListeners = () => {useGlobal.listen.clear(f);}
     f.getValue = () => curValues[index];
+    f.setValue = (newValue:T) => updateSubscribers(index)(newValue);
     return f;
 }
 

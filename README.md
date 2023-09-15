@@ -337,6 +337,10 @@ Remove all listeners for all shared values
 
 Get the current value of the shared state.  This is useful when a shared state value is needed outside the context of a React component where hooks cannot be used, such as passing a login token to an API.
 
+#### `useMyVar.setValue: <T>(newValue: T) => void`
+
+Sets a new value for the shared state.  This is useful when a shared state value needs to be updated outside the context of a React component where hooks cannot be used.
+
 #### `useGlobal.clear(index:string)`
 #### `useGlobal.clearAll()`
 

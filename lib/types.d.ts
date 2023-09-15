@@ -15,6 +15,7 @@ export declare interface ISharedState<T> {
     offChange: (spy:UpdateSpy<T>) => void;
     clearListeners: () => void;
     getValue: () => T;
+    setValue: (newValue: T) => void;
     __index__: string;
 }
 
