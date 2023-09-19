@@ -40,10 +40,6 @@ const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func
     const newSetter = memoize((old:T) => {
         // Update and save the value
         const newVal = updateVal(old);
-        if(index === "testSetVal") {
-            console.log("Update");
-            console.log(newVal);
-        }
     
         if(newVal !== old) {
             setCurValue(index, newVal);
@@ -53,7 +49,7 @@ const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func
         // Return the new value
         return newVal;
     }, {});
-console.log(getSubscribers(index).values.length);
+
     // Update the subscribers if there are any
     getSubscribers(index).forEach((setter) => {setter(newSetter);});
 }, {});
