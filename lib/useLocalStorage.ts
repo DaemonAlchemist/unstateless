@@ -32,7 +32,8 @@ const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:F
         return f;
     };
 }
-useLocalStorageRaw.string  = useLocalStorageRaw<string >({deserialize: (a:string) => a,   serialize:(a:string) => a            });
+useLocalStorageRaw.string  = <T extends string = string>(initial:T, i?:T | string) =>
+    useLocalStorageRaw<T>({deserialize: (a:string):T => a as T,   serialize:(a:T) => a})(initial, i);
 useLocalStorageRaw.number  = useLocalStorageRaw<number >({deserialize: (a:string) => +a,  serialize:(a:number) => `${a}`       });
 useLocalStorageRaw.boolean = useLocalStorageRaw<boolean>({deserialize: (a:string) => !!a, serialize:(a:boolean) => a ? "1" : ""});
 useLocalStorageRaw.object = <T extends {}>(initial:T | string, i?:T | string) =>
