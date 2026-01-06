@@ -281,10 +281,14 @@ const TestInvalidLocalStorageHook = () => {
     </>;
 }
 
-const a = {b: 1, c:undefined}
-a.c = {a};
+interface ICircular {
+    b: number;
+    c: ICircular | undefined;
+}
+const a: ICircular = {b: 1, c:undefined}
+a.c = a;
 const TestCircularObject = () => {
-    const [test, setTest] = useSharedState<any>('test', a)();
+    const [test, setTest] = useSharedState<ICircular>('test', a)();
 
     return <>
         <div data-testid="test">{test.b}</div>
@@ -511,7 +515,7 @@ describe("unstateless", () => {
             expect(screen.getByTestId("test")).toHaveTextContent("1");
             expect(screen.getByTestId("test-obja")).toHaveTextContent("1");
             expect(screen.getByTestId("test-objb")).toHaveTextContent("5");
-            expect(onRenderMain).toHaveBeenCalledTimes(3);
+            expect(onRenderMain).toHaveBeenCalledTimes(2);
             expect(onRenderChild).toHaveBeenCalledTimes(3);
         })
     });

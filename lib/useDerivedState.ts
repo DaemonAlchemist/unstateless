@@ -1,15 +1,14 @@
 import * as React from 'react';
+import { useSyncExternalStore } from 'react';
 import { ISharedState } from './types';
 import { curValues, useGlobal } from './useGlobal';
 
 export const useDerivedState = <T>(extractor:((...args:any[]) => T), states:ISharedState<any>[]):T => {
-    const [derivedValue, setDerivedValue] = React.useState<T>(extractor());
-
-    const listener = React.useCallback((newVal:any, oldVal:any, index:any) => {
-        setDerivedValue(extractor(...(states.map(index => curValues[index.__index__]))))
-    }, [states, extractor]);
-
-    React.useEffect(() => {
+    
+    const subscribe = React.useCallback((onStoreChange: () => void) => {
+        const listener = (newVal:any, oldVal:any, index:any) => {
+            onStoreChange();
+        }
         states.forEach(index => {
             useGlobal.listen.on(index, listener);
         });
@@ -21,5 +20,9 @@ export const useDerivedState = <T>(extractor:((...args:any[]) => T), states:ISha
         }
     }, [states]);
 
-    return derivedValue;
+    const getSnapshot = React.useCallback(() => {
+        return extractor(...(states.map(index => curValues[index.__index__])));
+    }, [states, extractor]);
+
+    return useSyncExternalStore(subscribe, getSnapshot);
 }

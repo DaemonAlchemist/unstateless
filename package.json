@@ -58,6 +58,6 @@
     "ts-functional": "^1.17.5"
   },
   "peerDependencies": {
-    "react": ">=16.8.0"
+    "react": ">=18.0.0"
   }
 }

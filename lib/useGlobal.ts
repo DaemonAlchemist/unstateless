@@ -1,18 +1,20 @@
 import { Guid } from 'guid-typescript';
 import * as React from 'react';
+import { useSyncExternalStore } from 'react';
 import * as StackTrace from 'stacktrace-js';
 import { memoize } from 'ts-functional';
 import { Func } from 'ts-functional/dist/types';
 import { ISharedState, IUseGlobalOptions, Setter, UpdateSpy } from './types';
 
 // Record all components who are subscribed to specific global states
-const subscribers:{[index:string]: Set<Func<any, void>>} = {};
+const subscribers:{[index:string]: Set<() => void>} = {};
 const getSubscribers = (index:string) => {
     if(!subscribers[index]) {
-        subscribers[index] = new Set<(val:any) => void>();
+        subscribers[index] = new Set<() => void>();
     }
     return subscribers[index];
 }
+
 // Record all spies that are listening to state changes
 const spies:{[index:string]: Set<UpdateSpy<any>>} = {};
 const globalSpies:Set<UpdateSpy<any>> = new Set<UpdateSpy<any>>();
@@ -34,64 +36,50 @@ const updateSubscribers = memoize(<T>(index: string) => (newValOrSetter:T | Func
         ? newValOrSetter as Func<T, T>
         : ():T => newValOrSetter;
     
-    // We need to wrap the setter function before sending it to the subscribers, so 
-    // that the value can updated (if needed) after it's generated.  The wrapper function is
-    // memoized, so that the new value is only calculated and updated once.
-    const newSetter = memoize((old:T) => {
-        // Update and save the value
-        const newVal = updateVal(old);
-    
-        if(newVal !== old) {
-            setCurValue(index, newVal);
-            callListeners(newVal, old, index);
-        }
+    // Calculate the new value
+    const oldVal = curValues[index];
+    const newVal = updateVal(oldVal);
 
-        // Return the new value
-        return newVal;
-    }, {});
+    if(newVal !== oldVal) {
+        setCurValue(index, newVal);
+        callListeners(newVal, oldVal, index);
+        
+        // Notify subscribers
+        getSubscribers(index).forEach((callback) => {callback();});
+    }
 
-    // Update the subscribers if there are any
-    getSubscribers(index).forEach((setter) => {setter(newSetter);});
+    // Return the new value
+    return newVal;
 }, {});
 
-const manageSubscribers = <T>(index: string, get:Func<void, T>, setVal:React.Dispatch<React.SetStateAction<T>>) => {
-    React.useEffect(() => {
-        const subs = getSubscribers(index);
-        subs.add(setVal);
-        if(curValues[index]) {setVal(curValues[index]);}
-        return () => {
-            subs.delete(setVal);
-        }        
-    }, [index, get, setVal]);
+const subscribe = (index:string) => (onStoreChange: () => void) => {
+    const subs = getSubscribers(index);
+    subs.add(onStoreChange);
+    return () => {
+        subs.delete(onStoreChange);
+    };
+}
+
+const getSnapshot = (index:string) => () => {
+    return curValues[index];
 }
 
 const useGlobalRaw = <T>(options?:IUseGlobalOptions<T>) =>
     (index: string, initialValue:T):[T, Setter<T>, (newVal:T) => () => void] => {
-        const get = () => {
+        
+        // Initialize if not already initialized
+        // This logic needs to run before useSyncExternalStore to ensure the value exists
+        if(typeof curValues[index] === "undefined") {
             const initial = !!options && !!options.loadInitialValue
                 ? (options.loadInitialValue as (index:string, i:T) => T)(index, initialValue)
                 : initialValue;
-            if(typeof curValues[index] === "undefined") {
-                setCurValue(index, initial);
-                callListeners(initial, initial, index);
-            }
-            return initial;
+            setCurValue(index, initial);
+            callListeners(initial, initial, index);
         }
 
-        const [curIndex, setCurIndex] = React.useState(index);
-        const [val, setVal] = React.useState<T>(get);
-        manageSubscribers<T>(index, get, setVal);
-
+        const val = useSyncExternalStore(subscribe(index), getSnapshot(index));
         const set = updateSubscribers<T>(index);
         const update = memoize(s => memoize((newVal:T) => () => {s(newVal);}, {}), {})(set);
-
-        // If the index of this hook changes, we need to manually update the current state based on the last saved value
-        React.useEffect(() => {
-            if(curIndex !== index) {
-                setCurIndex(index);
-                set(curValues[index] || get());
-            }
-        }, [index]);
 
         return [val, set, update];
     }
