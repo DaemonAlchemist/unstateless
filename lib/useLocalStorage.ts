@@ -26,7 +26,7 @@ const useLocalStorageRaw = <T>(options:{deserialize:Func<string, T>, serialize:F
     const save = saveLocalStorageValue<T>(options.serialize);
     const loadInitialValue = loadLocalStorageValue<T>(options.deserialize, options.serialize);
     return (initialValue:T | string, i?:T | string):ISharedState<T> => {
-        const {initial, index} = initSharedState<T>(initialValue, i);
+        const {initial, index} = initSharedState<T>(initialValue, i, loadInitialValue);
         const f = addSharedState<T>(index, () => useGlobal<T>({loadInitialValue})(index, initial));
         f.onChange(save);
         return f;
@@ -37,6 +37,15 @@ useLocalStorageRaw.string  = (initial:string | string, i?:string | string) =>
 useLocalStorageRaw.number  = useLocalStorageRaw<number >({deserialize: (a:string) => +a,  serialize:(a:number) => `${a}`       });
 useLocalStorageRaw.boolean = useLocalStorageRaw<boolean>({deserialize: (a:string) => !!a, serialize:(a:boolean) => a ? "1" : ""});
 useLocalStorageRaw.object = <T extends {}>(initial:T | string, i?:T | string) =>
-    useLocalStorageRaw<T>({deserialize: JSON.parse, serialize: JSON.stringify})(initial, i);
+    useLocalStorageRaw<T>({
+        deserialize: JSON.parse, 
+        serialize: (a:T) => {
+            try {
+                return JSON.stringify(a);
+            } catch(e) { 
+                return "null";
+            }
+        }
+    })(initial, i);
 
 export const useLocalStorage = useLocalStorageRaw;

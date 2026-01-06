@@ -138,7 +138,7 @@ export const addSharedState = <T>(index:string, f:any):ISharedState<T> => {
 }
 
 export const indexErrorMessage = "Unstateless error:  An index is required when using useSharedState directly inside a component.";
-export const initSharedState = <T>(initialValue:T | string, i?:T | string):{initial:T, index:string} => {
+export const initSharedState = <T>(initialValue:T | string, i?:T | string, loader?:(index:string, initial:T) => T):{initial:T, index:string} => {
     // If a custom hook is being defined inline within a component, it MUST have an index.
     // Throw an error otherwise.
     const isRendering = StackTrace.getSync().filter(s => s.functionName === "renderWithHooks").length > 0;
@@ -149,6 +149,13 @@ export const initSharedState = <T>(initialValue:T | string, i?:T | string):{init
     const definedIndex = typeof i !== 'undefined';
     const initial:T    = (definedIndex ? i : initialValue) as T;
     const index:string = (definedIndex ? initialValue : Guid.create().toString()) as string;
+    
+    if(curValues[index] === undefined) {
+        const val = loader ? loader(index, initial) : initial;
+        curValues[index] = val;
+        callListeners(val, val, index);
+    }
+
     return {initial, index};
 } 
 

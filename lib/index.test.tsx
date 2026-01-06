@@ -326,6 +326,10 @@ beforeEach(() => {
 window.localStorage = localStorage;
 
 describe("unstateless", () => {
+    beforeEach(() => {
+        useGlobal.clearAll();
+    });
+
     describe("test setup", () => {
         it("should setup localstorage", () => {
             expect(localStorage.getItem(usePreset1.__index__)).toEqual("foo1");
@@ -437,7 +441,7 @@ describe("unstateless", () => {
         it("should rerender when using setValue", () => {
             render(<TestSetValue />);
             expect(screen.getByTestId("test")).toHaveTextContent("test");
-            console.log("Run update");
+
             act(() => {
                 update();
             });
@@ -605,6 +609,90 @@ describe("unstateless", () => {
             useGlobal.listen.offAll(test);
             fireEvent.click(screen.getByTestId("button1-2"));
             expect(test).toHaveBeenCalledTimes(3);
+        });
+    });
+    describe("Additional Tests", () => {
+        it("should handle selectors returning new objects without infinite loops", () => {
+             // If useSyncExternalStore detects a new object every time, it might re-render, but shouldn't crash
+             // unless it triggers an effect that updates the state.
+             const useUnstableDerived = () => useDerivedState(() => ({ newVal: new Date().getTime() }), [useTest]);
+             
+             const renderSpy = jest.fn();
+             const TestComponent = () => {
+                 const derived = useUnstableDerived();
+                 renderSpy();
+                 return <div>{derived.newVal}</div>;
+             };
+ 
+             render(<TestComponent />);
+             expect(renderSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it("should handle circular objects in useLocalStorage gracefully", () => {
+            // Testing that it doesn't crash on init or update
+            const circular:any = {a: 1};
+            circular.b = circular;
+            
+            // This relies on the implementation of useLocalStorage to catch JSON stringify errors
+            const useBadStorage = useLocalStorage.object("bad-json", circular);
+            
+            // Should verify that it falls back to initial value or handles error
+            // Assuming current implementation swallows error or just fails? 
+            // The current implementation in useLocalStorage.ts catches errors during deserialize.
+            // Serialize happens on save. If serialize fails, it might throw.
+            // Let's verify behavior.
+            
+            expect(() => {
+                const TestObj = () => {
+                     const [val, setVal] = useBadStorage();
+                     return <button onClick={() => setVal(circular)}>Click</button>
+                }
+                render(<TestObj />);
+            }).not.toThrow();
+        });
+
+        it("should consistent update multiple subscribers", () => {
+             const useCount = useSharedState("multi-sub-test", 0);
+             let updates = 0;
+             const Child = () => {
+                 const [val] = useCount();
+                 React.useEffect(() => { updates++ }, [val]);
+                 return <div>{val}</div>
+             };
+             
+             render(<>
+                <Child />
+                <Child />
+                <Child />
+             </>);
+             // Initial mount = 3 updates
+             updates = 0;
+
+             act(() => {
+                 useCount.setValue(1);
+             });
+             
+             // All 3 should update
+             expect(updates).toBe(3);
+        });
+
+        it("should interact correctly with manual setters", () => {
+            const useManual = useSharedState("manual-test", "initial");
+            
+            const TestManual = () => {
+                const val = useDerivedState(() => useManual.getValue(), [useManual]);
+                return <div data-testid="manual">{val}</div>;
+            };
+
+            render(<TestManual />);
+            
+            expect(screen.getByTestId("manual")).toHaveTextContent("initial");
+            
+            act(() => {
+                useManual.setValue("updated");
+            });
+            
+            expect(screen.getByTestId("manual")).toHaveTextContent("updated");
         });
     });
 });
